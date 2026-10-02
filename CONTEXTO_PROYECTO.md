@@ -98,7 +98,7 @@ reacciona todo el tablero, en el tablero físico y en una página web.
 
 Libres: PCA0:8, PCA0:12, PCA1:6, PCA1:7, PCA1:14, PCA1:15. Sólo en la página (sin
 actuador): TACH_ROT, SLIP, ALTIMETER_100. El reloj es mecánico (sólo página).
-La fuente de verdad de esta tabla es `nucleo/configuracion.py` (`TABLERO`): si
+La fuente de verdad de esta tabla es `h08/config/` (`TABLERO`): si
 algo de acá difiere, manda el código.
 
 ### 3.3 Luces
@@ -129,17 +129,30 @@ valor  → interpolar_tabla(valor, cal)      # tabla en 0..180 "unidades de dial
 ```
 H08_Pi5/
 ├── CLAUDE.md, CONTEXTO_PROYECTO.md, LEEME.md, VERSION.txt, empaquetar.py
-├── nucleo/          modelo, fallas, escenarios, simulador, señales, mapa,
-│                    actuadores (PCA9685, simulados), paso a paso, servidor web,
-│                    acceso (clave), qr, utiles, configuracion
-├── raspberry_pi5/   tablero_pi5.py, hilo_simulacion.py, instalar.sh,
-│                    kiosco.sh, punto_de_acceso.sh, actualizar.sh, pruebas
-│                    guiadas, ajustes, web/ (tablero.html, mando.html, carátulas)
-└── pruebas/         correr_pruebas.py + 6 pruebas sin hardware
+├── docs/            GUIA_ESTRUCTURA_Y_ESTILO.md
+├── h08/             EL PROGRAMA: python3 -m h08 (paquete, imports absolutos)
+│   ├── __main__.py  arranca el tablero y despacha los subcomandos
+│   ├── rutas.py     dónde está cada archivo (una sola definición)
+│   ├── config/      el tablero en datos (hoy entero en __init__.py)
+│   ├── simulacion/  modelo, señales, fallas, escenarios, simulador, hilo (20 Hz)
+│   ├── hardware/    base, pca9685, simulado, paso_a_paso, mapa
+│   ├── web/         servidor, acceso (clave), qr, static/ (tablero.html,
+│   │                mando.html, sin_permiso.html, caratulas/)
+│   ├── herramientas/ diagnostico, pruebas guiadas, probar_canal, probar_motor,
+│   │                calibrar_servo, banco, interactivo
+│   └── util.py
+├── deploy/          instalar.sh, actualizar.sh, kiosco.sh, punto_de_acceso.sh
+├── pruebas/         correr_pruebas.py + 6 pruebas sin hardware
+└── raspberry_pi5/   SÓLO los datos de cada tablero (no está en git ni en el zip):
+                     secreto_admin.json, calibracion_servos.json,
+                     posicion_motores.json, informes/
 ```
 
-- Tres hilos: simulación a 20 Hz (`hilo_simulacion.py`), motores (`paso_a_paso.py`),
-  servidor HTTP (`ThreadingHTTPServer`, hilo principal).
+- Tres hilos: simulación a 20 Hz (`simulacion/hilo.py`), motores
+  (`hardware/paso_a_paso.py`), servidor HTTP (`ThreadingHTTPServer`, hilo principal).
+- Comando único con subcomandos: `python3 -m h08` (el tablero, lo que corre el
+  servicio) y `python3 -m h08 diagnostico | prueba-general | luces-motor |
+  instrumento | canal | motor | calibrar`. `python3 -m h08 --help` los lista.
 - El servidor manda órdenes al simulador por una `queue.Queue` y lee una "foto"
   del estado que se reemplaza entera.
 - API: `/`, `/mando`, `/qr`, `/qr.svg`, `/qr_wifi.svg`, `/cartel`,
@@ -164,12 +177,13 @@ solo. Basado en la documentación de Raspberry Pi y en cómo está instalado hoy
   como root**.
 
 ### 5.2 Dónde vive el programa
-- En la carpeta del usuario: **`/home/USUARIO/H08_Pi5/`** (en el código siempre
-  rutas relativas al archivo con `os.path.dirname(os.path.abspath(__file__))`,
-  nunca rutas fijas).
+- En la carpeta del usuario: **`/home/USUARIO/H08_Pi5/`**. Las rutas salen todas
+  de `h08/rutas.py`, relativas a ese archivo
+  (`os.path.dirname(os.path.abspath(__file__))`); nunca rutas fijas.
+- Se corre como paquete desde esa carpeta: `cd ~/H08_Pi5 && python3 -m h08 ...`.
 - Lo que el programa guarda (clave, calibración, posición del motor, informes)
-  va **dentro de `raspberry_pi5/`**, con escritura atómica (archivo temporal +
-  `os.replace`). Esos archivos son privados del tablero.
+  va **dentro de `raspberry_pi5/`** (`rutas.DATOS`), con escritura atómica
+  (archivo temporal + `os.replace`). Esos archivos son privados del tablero.
 
 ### 5.3 Dependencias
 - **Biblioteca estándar de Python** para todo lo posible (servidor HTTP, I2C con
@@ -193,7 +207,8 @@ solo. Basado en la documentación de Raspberry Pi y en cómo está instalado hoy
   `try`, para que todo corra simulado en Windows.
 
 ### 5.5 Arranque al encender: servicio systemd
-Archivo `/etc/systemd/system/tablero-h08.service` (lo escribe `instalar.sh`):
+Archivo `/etc/systemd/system/tablero-h08.service` (lo escribe `deploy/instalar.sh`,
+que antes borra el servicio y el kiosco de la versión vieja):
 ```ini
 [Unit]
 Description=Tablero didáctico Sikorsky S-55 H-08
@@ -203,8 +218,8 @@ After=network.target
 Type=simple
 User=USUARIO
 SupplementaryGroups=i2c gpio video
-WorkingDirectory=/home/USUARIO/H08_Pi5/raspberry_pi5
-ExecStart=/usr/bin/python3 /home/USUARIO/H08_Pi5/raspberry_pi5/tablero_pi5.py
+WorkingDirectory=/home/USUARIO/H08_Pi5
+ExecStart=/usr/bin/python3 -m h08
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20
@@ -214,7 +229,9 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=multi-user.target
 ```
 Reglas para un programa que corre como servicio:
-- Rutas absolutas en `ExecStart`; nada interactivo (`input()`), nada gráfico.
+- Intérprete con ruta absoluta en `ExecStart` (`/usr/bin/python3`) y
+  `WorkingDirectory` en la raíz, que es lo que le permite a `-m h08` encontrar el
+  paquete; nada interactivo (`input()`), nada gráfico.
 - Atrapar **SIGTERM** y apagar en orden (luces, servos, motor a cero) dentro de
   `TimeoutStopSec`.
 - La salida va al registro: `journalctl -u tablero-h08 -f`.
@@ -223,7 +240,7 @@ Reglas para un programa que corre como servicio:
 ### 5.6 Pantalla en modo kiosco
 - Escritorio que entra solo: `sudo raspi-config nonint do_boot_behaviour B4`.
 - Pantalla que no se apaga: `sudo raspi-config nonint do_blanking 1`.
-- Al iniciar el escritorio se lanza `raspberry_pi5/kiosco.sh` desde
+- Al iniciar el escritorio se lanza `deploy/kiosco.sh` desde
   `~/.config/labwc/autostart` (método del tutorial oficial de kiosco de Raspberry
   Pi) y desde `~/.config/autostart/tablero-kiosco.desktop` (XDG). `kiosco.sh` tiene
   candado (`flock`): nunca abre dos.
@@ -235,7 +252,7 @@ Reglas para un programa que corre como servicio:
 - La página en `?kiosco=1` se recarga sola cuando el servicio se reinicia.
 
 ### 5.7 Wifi propia
-- `punto_de_acceso.sh` crea con `nmcli` la conexión `tablero-ap`: red
+- `deploy/punto_de_acceso.sh` crea con `nmcli` la conexión `tablero-ap`: red
   **Tablero-H08**, clave **sikorsky55**, IP **10.55.0.1**, `ipv4.method shared`.
 - Hay que fijar el país del wifi (`raspi-config nonint do_wifi_country AR`) o la
   placa queda bloqueada. El servidor lee red/clave/IP de ese script para los QR.
@@ -245,23 +262,27 @@ Reglas para un programa que corre como servicio:
   probar con `bash -n` y `shellcheck`.
 - Python en UTF-8 con `# -*- coding: utf-8 -*-`; archivos de texto abiertos con
   `encoding="utf-8"`.
-- `instalar.sh` se corre **una vez**, sin `sudo` delante (pide la clave él):
-  paquetes, I2C, grupos, clave del profesor, servicio, kiosco, wifi. Después,
-  **un reinicio**.
-- `actualizar.sh ZIP`: respaldo completo, para el servicio, `rsync` excluyendo
-  los archivos privados, arranca el servicio.
+- `bash deploy/instalar.sh` se corre **una vez**, sin `sudo` delante (pide la
+  clave él): limpia la versión vieja (servicio, `~/.config/labwc/autostart`,
+  `tablero-kiosco.desktop`), paquetes, I2C, grupos, clave del profesor, servicio,
+  kiosco, wifi. Después, **un reinicio**.
+- `bash deploy/actualizar.sh ZIP`: respaldo completo, para el servicio, `rsync`
+  excluyendo los archivos privados, arranca el servicio. Exige que el servicio ya
+  esté instalado con `python3 -m h08` (desde la versión vieja se reinstala).
 - El zip se arma **sólo** con `empaquetar.py` (corre pruebas, excluye privados,
-  normaliza LF, escribe VERSION.txt).
+  normaliza LF, escribe VERSION.txt). Lleva `h08/`, `deploy/` y `pruebas/`; no
+  lleva `raspberry_pi5/`.
 
 ### 5.9 Cómo se verifica en la Pi
 ```
-python3 diagnostico_pi.py              # sistema, alimentación, I2C, GPIO, servicio,
+cd ~/H08_Pi5
+python3 -m h08 diagnostico             # sistema, alimentación, I2C, GPIO, servicio,
                                        # pantalla, wifi, archivos (no mueve nada)
 sudo systemctl stop tablero-h08
-python3 prueba_luces_motor.py
-python3 prueba_instrumento.py --todos
+python3 -m h08 luces-motor
+python3 -m h08 instrumento --todos
 sudo systemctl start tablero-h08
-python3 prueba_general.py              # detiene y arranca el servicio sola
+python3 -m h08 prueba-general          # detiene y arranca el servicio sola
 ```
 Los informes quedan en `raspberry_pi5/informes/`. Cuando el usuario los traiga,
 leerlos y separar hardware de código.
@@ -270,9 +291,10 @@ leerlos y separar hardware de código.
 
 - `py pruebas/correr_pruebas.py` después de cada cambio. Todo tiene que dar
   "Todas bien.".
-- `py raspberry_pi5/tablero_pi5.py --simulado --sin-clave` y abrir
+- `py -m h08 --simulado --sin-clave` (desde la raíz) y abrir
   `http://localhost:8000/` (`?kiosco=1`, `/mando`).
-- Las pruebas guiadas aceptan `--simulado --auto`.
+- Las pruebas guiadas aceptan `--simulado --auto` (`py -m h08 prueba-general
+  --simulado --auto`).
 - `py empaquetar.py` arma `dist/H08_Pi5.zip`.
 - Lo que no se puede probar en Windows (I2C, GPIO, systemd, nmcli, Chromium
   kiosco) se deja escrito para probar en la Pi y se dice claramente.

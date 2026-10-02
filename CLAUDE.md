@@ -6,7 +6,7 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 
 - Se DESARROLLA en Windows y se prueba en modo simulado.
 - Se INSTALA en una Raspberry Pi 5 con Raspberry Pi OS con escritorio (Bookworm o
-  posterior, Python 3.11) llevando `dist/H08_Pi5.zip` en un pendrive.
+  posterior; el código anda en Python 3.9 a 3.13) llevando `dist/H08_Pi5.zip` en un pendrive.
 - El documento completo del proyecto (requisitos, hardware, canales, y el FORMATO en
   que tiene que estar instalado un programa en la Pi 5) es `CONTEXTO_PROYECTO.md`.
   Leerlo antes de cualquier cambio grande o de tocar instalación/arranque.
@@ -15,28 +15,33 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 ## Comandos (Windows: `py`; en la Pi: `python3`)
 
 - Todas las pruebas: `py pruebas/correr_pruebas.py` (menos de 1 minuto, sin hardware)
-- Ver el tablero: `py raspberry_pi5/tablero_pi5.py --simulado --sin-clave`
+- Todo se corre desde la raíz del proyecto (`python3 -m h08` necesita ver la carpeta `h08/`).
+- Ver el tablero: `py -m h08 --simulado --sin-clave`
   y abrir http://localhost:8000/ (pantalla de la Pi: `/?kiosco=1`, mando: `/mando`)
-- Pruebas guiadas sin hardware: `py raspberry_pi5/prueba_general.py --simulado --auto`
-  (igual `prueba_instrumento.py --todos`, `prueba_luces_motor.py`)
+- Herramientas: `py -m h08 --help` lista los subcomandos (`diagnostico`,
+  `prueba-general`, `luces-motor`, `instrumento`, `canal`, `motor`, `calibrar`).
+- Pruebas guiadas sin hardware: `py -m h08 prueba-general --simulado --auto`
+  (igual `py -m h08 instrumento --todos --simulado --auto`, `py -m h08 luces-motor --simulado --auto`)
 - Armar el zip para la Pi: `py empaquetar.py` (corre las pruebas primero)
 
 ## Reglas
 
-- **Sólo biblioteca estándar de Python** en `nucleo/`, `raspberry_pi5/` y `pruebas/`.
+- **Sólo biblioteca estándar de Python** en `h08/` y `pruebas/`.
   Nada de pip ni paquetes nuevos. En la Pi sólo hay gpiozero y lgpio del sistema,
   importados adentro de funciones (en Windows no existen).
 - Tiene que seguir andando en Windows en modo simulado: nada de `fcntl`, `grp`,
   `os.geteuid` ni rutas fijas de Linux fuera de un `try` o de una función que sólo
   corre en la Pi.
+- Imports absolutos (`from h08.hardware import pca9685`); nada de `sys.path.insert`
+  dentro de `h08/`. Toda ruta de archivo sale de `h08/rutas.py`.
 - **Nunca** crear, leer para copiar, ni meter en un zip o en git:
   `raspberry_pi5/secreto_admin.json`, `calibracion_servos.json`, `posicion_motores.json`.
 - Los datos del tablero (canales, escalas, calibraciones, barridos, pines, direcciones)
-  viven SÓLO en `nucleo/configuracion.py`. No repetirlos en otro archivo.
+  viven SÓLO en `h08/config/`. No repetirlos en otro archivo.
 - Si una aguja física no cae en su marca, NO se toca la tabla `cal`: las carátulas
   impresas están dibujadas con esa tabla. Se calza la aguja
-  (`probar_canal.py ID --valor V`) o se calibra el servo
-  (`calibrar_servo.py PCA0 N --asistente`). La tabla `cal` sólo cambia si se
+  (`python3 -m h08 canal ID --valor V`) o se calibra el servo
+  (`python3 -m h08 calibrar PCA0 N --asistente`). La tabla `cal` sólo cambia si se
   reimprimen las carátulas.
 - Los `.sh` corren en la Pi con bash: fin de línea LF, probarlos con `bash -n`.
 - Todo texto que ve una persona (mensajes, página, comentarios) va en castellano
@@ -45,7 +50,7 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
   algo, agregar su prueba en `pruebas/` (lo nuevo de la Pi va en `prueba_pi5.py`).
 - Cambios chicos y de a uno. Antes de tocar varios archivos, proponer un plan.
 - No se puede probar acá: I2C, GPIO, systemd, NetworkManager, Chromium kiosco.
-  Eso se prueba en la Pi con `diagnostico_pi.py` y las pruebas guiadas; cuando el
+  Eso se prueba en la Pi con `python3 -m h08 diagnostico` y las pruebas guiadas; cuando el
   usuario traiga un informe de `raspberry_pi5/informes/`, leerlo y corregir desde ahí.
 
 ## Git y GitHub (lo decide el usuario)
@@ -63,18 +68,24 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 
 ## Cómo está armado
 
-- `nucleo/configuracion.py`: el tablero en datos. `TABLERO` (30 entradas),
-  `BARRIDO`, `ENGRANAJES`, `HORIZONTE`, `PLACAS` (PCA0 0x40, PCA1 0x41),
+- Un paquete, `h08/`, que se corre con `python3 -m h08` (`h08/__main__.py`: el
+  tablero y los subcomandos). `deploy/` tiene los `.sh` de la Pi; `pruebas/`, las
+  pruebas automáticas; `raspberry_pi5/` quedó SÓLO para los datos de cada tablero
+  (clave, calibración, posición del motor, `informes/`), fuera de git y del zip.
+- `h08/config/` (hoy entero en `__init__.py`): el tablero en datos. `TABLERO` (30
+  entradas), `BARRIDO`, `ENGRANAJES`, `HORIZONTE`, `PLACAS` (PCA0 0x40, PCA1 0x41),
   `SERVO_CFG` (500–2500 µs), `LUCES_ACTIVAS_EN_BAJO`, `MOTORES`, `ARRANQUE`.
-- Flujo cada 50 ms: `modelo_vuelo` + `fallas` + `escenarios` → `simulador`
-  → `senales` (real vs indicado) → `mapa_tablero` → `actuadores_pca9685` (servos y
-  luces por I2C) y `paso_a_paso` (brújula por GPIO 12-16-20-21).
-- `raspberry_pi5/tablero_pi5.py` arranca todo; `hilo_simulacion.py` (20 Hz) y
-  `nucleo/servidor_web.py` (puerto 8000, API, QR, carátulas; órdenes sólo con la
-  clave del profesor, ver `acceso.py`).
-- Página: `raspberry_pi5/web/tablero.html` (sin datos propios: todo sale de
-  `/api/catalogo`), `mando.html`, carátulas en `web/caratulas/` (copias de las
-  impresas; no editarlas a mano).
+- `h08/rutas.py`: dónde está cada archivo (datos, página, `VERSION.txt`, scripts).
+- Flujo cada 50 ms: `simulacion/modelo` + `fallas` + `escenarios` → `simulacion/simulador`
+  → `simulacion/senales` (real vs indicado) → `hardware/mapa` → `hardware/pca9685`
+  (servos y luces por I2C) y `hardware/paso_a_paso` (brújula por GPIO 12-16-20-21).
+- `h08/__main__.py` arranca todo; `simulacion/hilo.py` (20 Hz) y `web/servidor.py`
+  (puerto 8000, API, QR, carátulas; órdenes sólo con la clave del profesor, ver
+  `web/acceso.py`).
+- Herramientas de la Pi (diagnóstico, pruebas guiadas, ajustes) en `h08/herramientas/`.
+- Página: `h08/web/static/tablero.html` (sin datos propios: todo sale de
+  `/api/catalogo`), `mando.html`, carátulas en `h08/web/static/caratulas/` (copias de
+  las impresas; no editarlas a mano).
 
 ## La cuenta que no se puede romper
 
@@ -87,8 +98,9 @@ valor → `interpolar_tabla(valor, cal)` (tabla en 0..180) → × `factor_servo(
 - Barrido ≤ 180°: aguja directa, el servo usa sólo `barrido` grados.
 - La carátula impresa y la página ponen la marca en
   `ang_dibujo = centro + B/2 − a·B/180` (B ≥ 360: `centro − a`). Si se cambia un
-  barrido o una tabla `cal`, las carátulas se regeneran fuera de este paquete
-  (herramientas/caratulas.py y caratulas_web.py); avisarle al usuario.
+  barrido o una tabla `cal`, las carátulas se regeneran fuera de este proyecto
+  (con caratulas.py y caratulas_web.py, que no están en `h08/herramientas/`);
+  avisarle al usuario.
 
 ## Hardware (para no inventar)
 

@@ -4,25 +4,22 @@
 prueba_acceso.py - que el visitante no pueda mandar, y que el mando se ceda
 ============================================================================
 
-Prueba nucleo/acceso.py sin levantar ningun servidor. Son las reglas que
+Prueba h08/web/acceso.py sin levantar ningun servidor. Son las reglas que
 deciden quien puede meterle una falla al tablero delante de un curso, asi que
 conviene que esten probadas de verdad y no "se ve que anda".
 
-    python3 prueba_acceso.py
+    python3 pruebas/prueba_acceso.py
 """
 import os
 import sys
 import tempfile
 import time
 
-AQUI = os.path.dirname(os.path.abspath(__file__))
-for _c in (os.path.join(AQUI, "..", "nucleo"), os.path.join(AQUI, "nucleo")):
-    if os.path.isdir(_c):
-        sys.path.insert(0, os.path.abspath(_c))
-        break
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)          # hasta pasar a unittest (fase 4)
 
-import acceso                                                # noqa: E402
-from acceso import Acceso                                    # noqa: E402
+from h08.web import acceso  # noqa: E402
+from h08.web.acceso import Acceso  # noqa: E402
 
 fallos = []
 

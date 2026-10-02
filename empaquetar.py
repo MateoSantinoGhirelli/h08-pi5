@@ -12,8 +12,11 @@ En la computadora (Windows: py empaquetar.py, Linux/Mac: python3 empaquetar.py):
     py empaquetar.py --sin-pruebas    lo arma sin correr las pruebas
     py empaquetar.py --salida E:\\     lo deja directo en el pendrive
 
-En la Raspberry, la primera vez: descomprimirlo y  bash instalar.sh
-Las siguientes:                  bash actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
+En la Raspberry, la primera vez: descomprimirlo y  bash deploy/instalar.sh
+Las siguientes:                  bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
+
+El zip lleva h08/ (el programa), deploy/ (los scripts de la Pi) y pruebas/.
+No lleva raspberry_pi5/: ahí están los datos de cada tablero.
 
 Tres cuidados que hace solo:
   * NUNCA mete secreto_admin.json, calibracion_servos.json ni
@@ -31,8 +34,10 @@ import subprocess
 import sys
 import zipfile
 
-AQUI = os.path.dirname(os.path.abspath(__file__))
-CARPETAS = ("nucleo", "raspberry_pi5", "pruebas")
+from h08 import rutas
+
+AQUI = rutas.RAIZ
+CARPETAS = ("h08", "deploy", "pruebas")
 SUELTOS = ("LEEME.md", "CLAUDE.md", "CONTEXTO_PROYECTO.md", ".claude/settings.json", "empaquetar.py", ".gitignore", ".gitattributes")
 PRIVADOS = {"secreto_admin.json", "calibracion_servos.json", "posicion_motores.json"}
 FUERA_DIR = {"__pycache__", "informes", ".venv", ".git", "dist", ".claude"}
@@ -92,7 +97,7 @@ def main():
     version = ("H08_Pi5 %s  ·  huella %s\n"
                "Tablero didáctico H-08 · Sikorsky S-55 / H-19A · programa de la Raspberry Pi 5\n"
                "archivos  %d\n"
-               "Se ve al arrancar el programa y en diagnostico_pi.py.\n"
+               "Se ve al arrancar el programa y en python3 -m h08 diagnostico.\n"
                % (ahora.strftime("%Y-%m-%d %H:%M"), h.hexdigest()[:12], len(lista) + 1))
 
     os.makedirs(a.salida, exist_ok=True)
@@ -115,12 +120,13 @@ def main():
         print("SE COLÓ UN ARCHIVO PRIVADO: %s. Zip borrado." % colados)
         return 1
     # la copia local también queda con la versión nueva
-    with open(os.path.join(AQUI, "VERSION.txt"), "w", encoding="utf-8", newline="\n") as f:
+    with open(rutas.VERSION, "w", encoding="utf-8", newline="\n") as f:
         f.write(version)
     print("\nListo: %s  (%d archivos, %.0f kB)" % (destino, len(nombres),
                                                    os.path.getsize(destino) / 1024.0))
     print(version.splitlines()[0])
-    print("En la Raspberry:  bash actualizar.sh RUTA/H08_Pi5.zip   (la primera vez: instalar.sh)")
+    print("En la Raspberry:  bash deploy/actualizar.sh RUTA/H08_Pi5.zip   "
+          "(la primera vez: bash deploy/instalar.sh)")
     return 0
 
 

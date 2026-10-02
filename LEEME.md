@@ -24,19 +24,39 @@ No hace falta internet, ni pip, ni instalar nada fuera de los paquetes del siste
 
 ---
 
+## Un solo comando
+
+Todo se hace con `python3 -m h08`, **desde la carpeta del programa** (`cd ~/H08_Pi5`):
+
+| Comando | Para qué |
+|---|---|
+| `python3 -m h08` | el tablero (es lo que arranca el servicio solo al encender) |
+| `python3 -m h08 diagnostico` | revisa conexiones e instalación, no mueve nada |
+| `python3 -m h08 prueba-general` | el tablero entero, de punta a punta |
+| `python3 -m h08 luces-motor` | las luces de alerta y el motor de la brújula |
+| `python3 -m h08 instrumento` | instrumento por instrumento |
+| `python3 -m h08 canal` | un canal suelto, para calzar una aguja |
+| `python3 -m h08 motor` | el motor suelto: sentido, bobinas y cero |
+| `python3 -m h08 calibrar` | los extremos reales de un servo |
+
+`python3 -m h08 --help` muestra la lista, y cada uno tiene su propia ayuda: `python3 -m h08 canal --help`.
+
+---
+
 ## Instalación (una sola vez)
 
 1. Copiar la carpeta `H08_Pi5` a la Raspberry, por ejemplo con un pendrive, y dejarla en la carpeta del usuario (`/home/USUARIO/H08_Pi5`).
 2. Abrir una terminal y correr:
 
    ```
-   cd ~/H08_Pi5/raspberry_pi5
-   bash instalar.sh
+   cd ~/H08_Pi5
+   bash deploy/instalar.sh
    sudo reboot
    ```
 
    `instalar.sh` se corre **sin** `sudo` adelante (la clave la pide solo). Hace esto:
 
+   - limpia lo que haya dejado una versión anterior (el servicio y el arranque del kiosco viejos);
    - instala `gpiozero`, `lgpio`, `i2c-tools`, Chromium, `rsync` y `unzip`;
    - habilita el I2C a 400 kHz;
    - suma el usuario a los grupos `i2c`, `gpio` y `video`;
@@ -50,16 +70,37 @@ No hace falta internet, ni pip, ni instalar nada fuera de los paquetes del siste
 3. Después del reinicio, comprobar que todo quedó bien:
 
    ```
-   cd ~/H08_Pi5/raspberry_pi5
-   python3 diagnostico_pi.py
+   cd ~/H08_Pi5
+   python3 -m h08 diagnostico
    ```
+
+---
+
+## Pasar de la versión vieja a la nueva
+
+La versión vieja arrancaba desde `raspberry_pi5/tablero_pi5.py`; la nueva, con `python3 -m h08`. Para pasar de una a la otra se reinstala limpio (`actualizar.sh` no sirve para este paso):
+
+```
+sudo systemctl stop tablero-h08
+mv ~/H08_Pi5 ~/H08_Pi5_viejo          # o borrarla, si no hay nada que guardar
+# copiar la carpeta H08_Pi5 nueva a /home/USUARIO/H08_Pi5
+cd ~/H08_Pi5
+bash deploy/instalar.sh
+sudo reboot
+```
+
+Después del reinicio: `cd ~/H08_Pi5 && python3 -m h08 diagnostico`.
+
+- `instalar.sh` borra por su cuenta el arranque del kiosco viejo (la línea de `kiosco.sh` en `~/.config/labwc/autostart` y `~/.config/autostart/tablero-kiosco.desktop`) y vuelve a escribir el servicio `tablero-h08` con el comando nuevo.
+- Se genera una **clave del profesor nueva**: hay que volver a imprimir la hoja del QR (`python3 -m h08 --qr-admin --hoja admin.html`).
+- Si había servos calibrados o la brújula tenía su cero ajustado, antes de reinstalar se pueden copiar `calibracion_servos.json` y `posicion_motores.json` de `~/H08_Pi5_viejo/raspberry_pi5/` a `~/H08_Pi5/raspberry_pi5/`. Si no, los servos usan los valores nominales y la brújula arranca en 0°.
 
 ---
 
 ## Cableado de la Raspberry a la placa madre
 
 ```
-python3 diagnostico_pi.py --cableado
+python3 -m h08 diagnostico --cableado
 ```
 
 | Función | GPIO | Pata de la Raspberry |
@@ -124,7 +165,7 @@ Tres agujas existen **sólo en la página**, porque en el tablero no tienen actu
 
 ## Puesta en marcha: las pruebas, en este orden
 
-Todas se corren desde `~/H08_Pi5/raspberry_pi5`. Las pruebas guiadas preguntan «¿se movió?, ¿se encendió?» y guardan un informe con fecha en `informes/`. Casi todas necesitan el servicio detenido, porque manejan las placas directo:
+Todas se corren desde `~/H08_Pi5`. Las pruebas guiadas preguntan «¿se movió?, ¿se encendió?» y guardan un informe con fecha en `raspberry_pi5/informes/`. Casi todas necesitan el servicio detenido, porque manejan las placas directo:
 
 ```
 sudo systemctl stop tablero-h08        # antes
@@ -133,12 +174,12 @@ sudo systemctl start tablero-h08       # después
 
 | # | Prueba | Para qué |
 |---|---|---|
-| 1 | `python3 diagnostico_pi.py` | **Diagnóstico de conexiones.** Revisa sistema, alimentación (baja tensión y 5 V medidos), bus I2C (qué hay conectado y si cada PCA9685 quedó configurado a 50 Hz), GPIO del motor, servicio, pantalla, wifi y archivos. No mueve nada y puede correr con el servicio andando. Para cada falla dice el comando que la arregla. |
-| 2 | `python3 prueba_luces_motor.py` | **Luces y motor.** Prueba de lámparas, cada luz de a una (así se ven dos cables cruzados), la luz fantasma, las bobinas A-B-C-D de la plaquita, N-E-S-O, el camino corto (de 350° a 10°), tres vueltas de ida y vuelta sin perder pasos, y que las bobinas se suelten en reposo. |
-| 3 | `python3 probar_canal.py ID --valor V` | **Calzar la aguja** de cada instrumento sobre su marca (por ejemplo `AIRSPEED --valor 60`). |
-| 4 | `python3 calibrar_servo.py PCA0 6 --asistente` | Sólo si un servo no llega a un extremo o zumba en el tope. |
-| 5 | `python3 prueba_instrumento.py --todos` | **Instrumento por instrumento.** Lleva cada aguja por los números grandes de **su** carátula, con la misma cuenta que usa el tablero en marcha, y pregunta si marca bien. También pasa por N-E-S-O en la brújula y por cada luz. Si algo falla, dice con qué se arregla. Para uno solo: `python3 prueba_instrumento.py VSI`. |
-| 6 | `python3 prueba_general.py` | **Prueba general del tablero, de punta a punta.** Tarda unos 15 minutos; detiene y arranca el servicio sola. Tiene tres partes: diagnóstico, hardware solo y tablero entero. En el hardware solo las 20 agujas barren **juntas** mientras se mide la alimentación, y ésa es la prueba de la fuente de servos. En el tablero entero se toma el mando con la clave del profesor, se prueban las luces desde el mando, se meten dos fallas (aceite y generador) y se comprueba la pantalla y un celular. |
+| 1 | `python3 -m h08 diagnostico` | **Diagnóstico de conexiones.** Revisa sistema, alimentación (baja tensión y 5 V medidos), bus I2C (qué hay conectado y si cada PCA9685 quedó configurado a 50 Hz), GPIO del motor, servicio, pantalla, wifi y archivos. No mueve nada y puede correr con el servicio andando. Para cada falla dice el comando que la arregla. |
+| 2 | `python3 -m h08 luces-motor` | **Luces y motor.** Prueba de lámparas, cada luz de a una (así se ven dos cables cruzados), la luz fantasma, las bobinas A-B-C-D de la plaquita, N-E-S-O, el camino corto (de 350° a 10°), tres vueltas de ida y vuelta sin perder pasos, y que las bobinas se suelten en reposo. |
+| 3 | `python3 -m h08 canal ID --valor V` | **Calzar la aguja** de cada instrumento sobre su marca (por ejemplo `python3 -m h08 canal AIRSPEED --valor 60`). |
+| 4 | `python3 -m h08 calibrar PCA0 6 --asistente` | Sólo si un servo no llega a un extremo o zumba en el tope. |
+| 5 | `python3 -m h08 instrumento --todos` | **Instrumento por instrumento.** Lleva cada aguja por los números grandes de **su** carátula, con la misma cuenta que usa el tablero en marcha, y pregunta si marca bien. También pasa por N-E-S-O en la brújula y por cada luz. Si algo falla, dice con qué se arregla. Para uno solo: `python3 -m h08 instrumento VSI`. |
+| 6 | `python3 -m h08 prueba-general` | **Prueba general del tablero, de punta a punta.** Tarda unos 15 minutos; detiene y arranca el servicio sola. Tiene tres partes: diagnóstico, hardware solo y tablero entero. En el hardware solo las 20 agujas barren **juntas** mientras se mide la alimentación, y ésa es la prueba de la fuente de servos. En el tablero entero se toma el mando con la clave del profesor, se prueban las luces desde el mando, se meten dos fallas (aceite y generador) y se comprueba la pantalla y un celular. |
 
 Todas aceptan `--simulado --auto` para ver cómo son en una computadora, sin hardware.
 
@@ -152,13 +193,14 @@ Las pruebas automáticas del programa (no necesitan hardware) están en `python3
 - **QR del profesor** (para operar el tablero desde el celular: modos, fallas, prueba de luces):
 
   ```
-  python3 tablero_pi5.py --qr-admin --hoja admin.html
+  cd ~/H08_Pi5
+  python3 -m h08 --qr-admin --hoja admin.html
   ```
 
-  Esa hoja no se pega en la pared. Si se filtra, se genera otra con `python3 tablero_pi5.py --renovar-clave`.
+  Esa hoja no se pega en la pared. Si se filtra, se genera otra con `python3 -m h08 --renovar-clave`.
 - **Cartel para el público**, con el QR de la red wifi y el de la página: `http://10.55.0.1:8000/cartel`, para imprimir.
-- **Usar el escritorio** de la Raspberry: `bash kiosco.sh parar`. Para volver al tablero: `bash kiosco.sh`.
-- **Volver a la red de la escuela:** `sudo bash punto_de_acceso.sh apagar`. Para volver a la propia: `sudo bash punto_de_acceso.sh permanente`.
+- **Usar el escritorio** de la Raspberry: `bash deploy/kiosco.sh parar`. Para volver al tablero: `bash deploy/kiosco.sh`.
+- **Volver a la red de la escuela:** `sudo bash deploy/punto_de_acceso.sh apagar`. Para volver a la propia: `sudo bash deploy/punto_de_acceso.sh permanente`.
 
 ---
 
@@ -167,10 +209,11 @@ Las pruebas automáticas del programa (no necesitan hardware) están en `python3
 Si trabajás el código en la computadora (por ejemplo con Claude Code), el zip se arma ahí con `py empaquetar.py`. Primero corre las pruebas; si pasan, deja `dist/H08_Pi5.zip`. Eso se lleva a la Pi en un pendrive y se instala con el comando de abajo.
 
 ```
-bash actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
+cd ~/H08_Pi5
+bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
 ```
 
-Copia la versión nueva encima de la instalada y guarda antes un respaldo completo. No toca los tres archivos que son de **este** tablero:
+Copia la versión nueva encima de la instalada y guarda antes un respaldo completo. No toca los tres archivos que son de **este** tablero, que están en `raspberry_pi5/`:
 
 - `secreto_admin.json`, la clave del profesor;
 - `calibracion_servos.json`, lo medido en cada servo;
@@ -178,32 +221,37 @@ Copia la versión nueva encima de la instalada y guarda antes un respaldo comple
 
 Después reinicia el servicio. **La pantalla de la Raspberry se recarga sola con la versión nueva.** Los celulares la ven al recargar la página.
 
+Si en la Raspberry todavía está la versión vieja (la de `raspberry_pi5/tablero_pi5.py`), `actualizar.sh` avisa y no hace nada: ver «Pasar de la versión vieja a la nueva».
+
 ---
 
 ## Cómo funcionan las luces
 
-- En la placa, el ánodo de cada LED va a +5 V y el cátodo va, por su resistencia de 220 Ω, a una salida del PCA9685. **La luz enciende con la salida en BAJO.** El programa ya lo tiene en cuenta (`LUCES_ACTIVAS_EN_BAJO` en `nucleo/configuracion.py`).
+- En la placa, el ánodo de cada LED va a +5 V y el cátodo va, por su resistencia de 220 Ω, a una salida del PCA9685. **La luz enciende con la salida en BAJO.** El programa ya lo tiene en cuenta (`LUCES_ACTIVAS_EN_BAJO` en `h08/config`).
 - **Al dar energía, las seis luces se encienden** hasta que arranca el servicio, unos 20 a 30 segundos. Es normal y sirve de prueba de lámparas del encendido: la que no prende ahí tiene el LED o el cable cortado.
 - Cada luz se enciende por **su** condición del modelo (ver la tabla de canales). Si la barra eléctrica cae por debajo de 20 V, se apagan todas, como en el avión.
 - La **prueba de lámparas del mando** enciende las seis en el tablero **y** en la página, que ahora muestra lo que tienen las luces de verdad.
-- **Luz fantasma.** Con la salida "apagada" (en alto, 3,3 V), al LED le quedan 1,7 V. Un LED rojo o ámbar puede verse apenas encendido en la oscuridad, y el programa no lo puede evitar. Se arregla en la placa con un diodo 1N4148 en serie con cada LED. `prueba_luces_motor.py` pregunta por esto.
+- **Luz fantasma.** Con la salida "apagada" (en alto, 3,3 V), al LED le quedan 1,7 V. Un LED rojo o ámbar puede verse apenas encendido en la oscuridad, y el programa no lo puede evitar. Se arregla en la placa con un diodo 1N4148 en serie con cada LED. `python3 -m h08 luces-motor` pregunta por esto.
 
 ---
 
 ## Si algo no anda
 
+Todos los comandos, desde `~/H08_Pi5`.
+
 | Síntoma | Qué hacer |
 |---|---|
-| La pantalla queda en el escritorio | `bash kiosco.sh`. Si al reiniciar sigue igual: `python3 diagnostico_pi.py`, punto 6 |
+| La pantalla queda en el escritorio | `bash deploy/kiosco.sh`. Si al reiniciar sigue igual: `python3 -m h08 diagnostico`, punto 6 |
 | La página dice «sin conexión» | `sudo systemctl status tablero-h08`, `journalctl -u tablero-h08 -n 50` |
-| Ninguna aguja se mueve | `python3 diagnostico_pi.py`: el punto 3 dice si responden los PCA9685 |
-| Una sola aguja no se mueve | `python3 prueba_instrumento.py ESA`, después el cable de su canal |
-| La aguja marca corrido | `python3 probar_canal.py ESA --valor V` y calzar la aguja |
-| Zumba contra un tope | `python3 calibrar_servo.py PCA0 N --asistente` |
-| Las placas se reinician cuando se mueven muchas agujas | Es la fuente de servos: el LM2596 da 3 A como máximo. `prueba_general.py` (A3) lo muestra |
-| La brújula gira al revés | `sentido` en `MOTORES` (`nucleo/configuracion.py`) |
-| La brújula tiembla y no gira | `python3 probar_motor.py 1 --bobinas`: las bobinas tienen que ir en orden A-B-C-D |
-| El celular no ve la red | `sudo bash punto_de_acceso.sh estado` (y el país del wifi: lo pone solo) |
+| `No module named h08` | el comando se corrió fuera de la carpeta: `cd ~/H08_Pi5` y repetir |
+| Ninguna aguja se mueve | `python3 -m h08 diagnostico`: el punto 3 dice si responden los PCA9685 |
+| Una sola aguja no se mueve | `python3 -m h08 instrumento ESA`, después el cable de su canal |
+| La aguja marca corrido | `python3 -m h08 canal ESA --valor V` y calzar la aguja |
+| Zumba contra un tope | `python3 -m h08 calibrar PCA0 N --asistente` |
+| Las placas se reinician cuando se mueven muchas agujas | Es la fuente de servos: el LM2596 da 3 A como máximo. `python3 -m h08 prueba-general` (A3) lo muestra |
+| La brújula gira al revés | `sentido` en `MOTORES` (`h08/config`) |
+| La brújula tiembla y no gira | `python3 -m h08 motor 1 --bobinas`: las bobinas tienen que ir en orden A-B-C-D |
+| El celular no ve la red | `sudo bash deploy/punto_de_acceso.sh estado` (y el país del wifi: lo pone solo) |
 
 ---
 
@@ -217,21 +265,21 @@ H08_Pi5/
 ├── CONTEXTO_PROYECTO.md      el proyecto completo y el formato de instalación en la Pi 5
 ├── empaquetar.py             arma dist/H08_Pi5.zip para llevar a la Pi
 ├── .gitignore .gitattributes para git: lo privado afuera y fin de línea LF
-├── nucleo/                   el modelo, las fallas, el mapa del tablero, las placas,
-│                             el motor y el servidor web
-├── raspberry_pi5/
-│   ├── tablero_pi5.py        el programa (lo arranca el servicio)
+├── docs/                     guía de estructura y estilo del código
+├── h08/                      el programa: python3 -m h08
+│   ├── __main__.py           el tablero y los subcomandos
+│   ├── rutas.py              dónde está cada archivo
+│   ├── config/               el tablero en datos: canales, escalas, calibraciones
+│   ├── simulacion/           el modelo de vuelo, las fallas y los escenarios
+│   ├── hardware/             las placas PCA9685 y el motor paso a paso
+│   ├── web/                  el servidor, la clave del profesor, los QR y la página
+│   └── herramientas/         diagnóstico, pruebas guiadas y ajustes
+├── deploy/
 │   ├── instalar.sh           instalación, una vez
 │   ├── actualizar.sh         pasar a una versión nueva
 │   ├── kiosco.sh             el tablero en la pantalla de la Raspberry
-│   ├── punto_de_acceso.sh    la red wifi propia
-│   ├── diagnostico_pi.py     diagnóstico de conexiones e instalación
-│   ├── prueba_instrumento.py instrumento por instrumento
-│   ├── prueba_luces_motor.py luces y motor
-│   ├── prueba_general.py     el tablero entero
-│   ├── probar_canal.py       un canal suelto, calzar agujas
-│   ├── probar_motor.py       el motor suelto, sentido y cero
-│   ├── calibrar_servo.py     extremos reales de cada servo
-│   └── web/                  la página del tablero, la del mando y las carátulas
-└── pruebas/                  pruebas automáticas, sin hardware
+│   └── punto_de_acceso.sh    la red wifi propia
+├── pruebas/                  pruebas automáticas, sin hardware
+└── raspberry_pi5/            los datos de ESTE tablero (clave, calibración, posición
+                              del motor, informes); no viaja en el zip
 ```

@@ -3,7 +3,7 @@
 prueba_qr.py - que los codigos QR se puedan LEER
 =================================================
 
-No mira el dibujo: lo decodifica. Genera codigos con nucleo/qr.py, los
+No mira el dibujo: lo decodifica. Genera codigos con h08/web/qr.py, los
 rasteriza y se los da a un lector de verdad -el de OpenCV- a ver si sale el
 mismo texto que entro.
 
@@ -36,10 +36,10 @@ import random
 import string
 import sys
 
-AQUI = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(AQUI), "nucleo"))
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)          # hasta pasar a unittest (fase 4)
 
-import qr                                                   # noqa: E402
+from h08.web import qr  # noqa: E402
 
 
 def _imagen(matriz, escala=8, borde=4):

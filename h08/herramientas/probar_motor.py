@@ -1,0 +1,140 @@
+# -*- coding: utf-8 -*-
+"""
+python3 -m h08 motor - puesta en marcha del motor paso a paso de la brújula
+===========================================================================
+Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
+EEST N° 7 - Taller Regional Quilmes
+
+Motor 1 = aguja de la brújula (la rosa va pegada, fija)   GPIO 12, 16, 20, 21
+(el lugar del motor 0, GPIO 6, 13, 19, 26, queda libre en la placa madre)
+
+Con el servicio detenido (sudo systemctl stop tablero-h08):
+
+    python3 -m h08 motor --listar              pines, sentido y posición guardada
+    python3 -m h08 motor 1 --bobinas           IN1..IN4 de a una, 1 s cada una:
+                                               se prenden los LED A, B, C, D
+                                               de la plaquita en ese orden
+    python3 -m h08 motor 1 --grados 90         la aguja tiene que apuntar a la E
+    python3 -m h08 motor 1 --mover -5          corre la aguja 5 grados, para
+                                               dejarla justo sobre la N
+    python3 -m h08 motor 1 --cero              la posición actual pasa a ser el cero
+    python3 -m h08 motor 1 --vueltas 10        diez vueltas y vuelve: la aguja
+                                               tiene que quedar donde estaba
+
+SI GIRA AL REVÉS: cambiar el 'sentido' de ese motor en h08.config.MOTORES
+(+1 por -1 o al revés). No hace falta tocar cables.
+
+SI TIEMBLA Y NO GIRA: los cables IN1..IN4 están cruzados. Con --bobinas los
+LED de la plaquita tienen que prender A, B, C, D en ese orden.
+
+Al terminar, las agujas vuelven a su cero y la posición queda guardada.
+"""
+
+import argparse
+import sys
+import time
+
+from h08 import rutas
+from h08.config import MOTORES, MOTOR_CFG
+from h08.herramientas import banco
+
+
+def listar():
+    guardado = {}
+    try:
+        import json
+        with open(rutas.MOTORES, encoding="utf-8") as f:
+            guardado = json.load(f)
+    except (OSError, ValueError):
+        pass
+    print("")
+    for n, m in sorted(MOTORES.items()):
+        pos = guardado.get(str(n))
+        print("  Motor %d  %-14s GPIO %-15s sentido %+d   posición %s"
+              % (n, m["id"], ",".join(str(p) for p in m["pines"]), m["sentido"],
+                 "%.1f°" % pos[0] if pos else "0° (sin archivo)"))
+    print("\n  %.2f pasos por vuelta, hasta %d pasos/s\n"
+          % (MOTOR_CFG["pasos_por_vuelta"], MOTOR_CFG["vel_max_pps"]))
+
+
+def esperar(gestor, limite):
+    if not gestor.esperar_quietos(limite):
+        print("  (no llegó a tiempo: revisar alimentación y cables)")
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="python3 -m h08 motor",
+                                 description="Probar los motores paso a paso")
+    ap.add_argument("motor", nargs="?", type=int, choices=sorted(MOTORES))
+    ap.add_argument("--listar", action="store_true")
+    ap.add_argument("--bobinas", action="store_true")
+    ap.add_argument("--grados", type=float)
+    ap.add_argument("--mover", type=float)
+    ap.add_argument("--cero", action="store_true")
+    ap.add_argument("--vueltas", type=int)
+    a = ap.parse_args(argv)
+
+    if a.listar or a.motor is None:
+        listar()
+        return 0
+
+    banco.exigir_servicio_detenido()
+    from h08.hardware.paso_a_paso import GestorMotores, EscritorGPIO, SECUENCIA
+    try:
+        escritor = EscritorGPIO()
+    except RuntimeError as e:
+        print("  %s" % e)
+        return 1
+    gestor = GestorMotores(escritor, rutas.MOTORES)
+    m = gestor.motores[a.motor]
+    print("  Motor %d (%s), aguja en %.1f°" % (a.motor, MOTORES[a.motor]["id"],
+                                              m.grados()))
+
+    if a.bobinas:
+        for i, letra in enumerate("ABCD"):
+            print("    IN%d  (LED %s)" % (i + 1, letra))
+            escritor(m.pines, 1 << i)
+            time.sleep(1.0)
+        escritor(m.pines, SECUENCIA[m.estado])
+        time.sleep(0.2)
+        m.soltar()
+        escritor.cerrar()
+        return 0
+
+    if a.cero:
+        m.declarar_cero()
+        gestor.guardar_ahora()
+        escritor.cerrar()
+        print("  Listo: esta posición es el cero.")
+        return 0
+
+    gestor.start()
+    try:
+        if a.mover is not None:
+            m.obj_grados += a.mover
+            esperar(gestor, 10)
+            print("  Aguja en %.1f°. Si quedó sobre el cero:  --cero" % m.grados())
+            gestor.detener()
+            escritor.cerrar()
+            return 0
+
+        if a.vueltas:
+            inicio = m.obj_grados
+            print("  %d vueltas adelante..." % a.vueltas)
+            m.obj_grados = inicio + 360.0 * a.vueltas
+            esperar(gestor, 5 + 6 * a.vueltas)
+            input("  ¿Quedó donde arrancó? Enter para volver...")
+            m.obj_grados = inicio
+            esperar(gestor, 5 + 6 * a.vueltas)
+        elif a.grados is not None:
+            m.ir_a_grados(a.grados)
+            esperar(gestor, 10)
+            input("  Marcando %.0f. Enter para volver a cero..." % a.grados)
+    except KeyboardInterrupt:
+        print("")
+    gestor.cerrar()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

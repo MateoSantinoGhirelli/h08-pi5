@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tablero H-08 · esta parte es del profesor</title>
+<!--
+  La pagina que ve el que llega a /mando sin la clave.
+
+  No dice "acceso denegado" ni "error 403". Dice quien tiene la llave y que
+  puede hacer mientras tanto, que es lo que la persona necesita saber. Un
+  cartel que solo dice que no, en un aula, se lee como que algo se rompio.
+-->
+<style>
+ :root{--fondo:#14161a;--panel:#1c2026;--borde:#2b323c;--texto:#e7e9ec;
+       --tenue:#9aa4ae;--acento:#d8a531}
+ html,body{margin:0;min-height:100%;background:var(--fondo);color:var(--texto);
+   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+ .caja{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+   justify-content:center;gap:1.6rem;padding:2rem 1.4rem;box-sizing:border-box;
+   text-align:center}
+ .llave{font-size:3rem;line-height:1}
+ h1{font-size:1.35rem;font-weight:600;margin:0}
+ p{margin:0;color:var(--tenue);max-width:30rem;line-height:1.6}
+ .tarjeta{background:var(--panel);border:1px solid var(--borde);
+   border-radius:14px;padding:1.2rem 1.4rem;max-width:32rem}
+ .tarjeta b{color:var(--texto)}
+ a.boton{display:inline-block;background:var(--acento);color:#1b1403;
+   text-decoration:none;font-weight:600;padding:.85rem 1.6rem;border-radius:10px;
+   font-size:1.05rem}
+ a.boton:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+<div class="caja">
+  <div class="llave">🔑</div>
+  <h1>Esta parte la maneja el profesor</h1>
+  <p>Para operar el tablero —cambiar de modo, meter una falla, pausar— hace
+     falta entrar con el <b>código QR del docente</b>. No hay contraseña que
+     tipear: el código está adentro de ese QR.</p>
+  <div class="tarjeta">
+    <p>Si sos vos el que tiene que operarlo y no encontrás el QR, sale de la
+    Raspberry con:<br><br>
+    <b>python3 -m h08 --qr-admin</b></p>
+  </div>
+  <a class="boton" href="/">Ver el tablero</a>
+  <p style="font-size:.9rem">El tablero se ve en vivo desde cualquier
+     dispositivo de la red, sin permiso ni clave.</p>
+</div>
+</body>
+</html>

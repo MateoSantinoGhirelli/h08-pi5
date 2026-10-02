@@ -24,12 +24,12 @@ import sys
 import tempfile
 import time
 
-AQUI = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(AQUI), "nucleo"))
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)          # hasta pasar a unittest (fase 4)
 
-import actuadores_pca9685 as P                                   # noqa: E402
-import paso_a_paso as M                                          # noqa: E402
-from configuracion import TABLERO, LED, SERVO, MOTOR_CFG, PLACAS  # noqa: E402
+from h08.hardware import pca9685 as P  # noqa: E402
+from h08.hardware import paso_a_paso as M  # noqa: E402
+from h08.config import TABLERO, LED, SERVO, MOTOR_CFG, PLACAS  # noqa: E402
 
 fallos = []
 
@@ -234,7 +234,7 @@ def probar_pca():
 def probar_tablero_completo():
     """El simulador entero escribiendo sobre las placas de mentira."""
     print("\n  SIMULADOR SOBRE LAS PLACAS")
-    from simulador import Simulador
+    from h08.simulacion.simulador import Simulador
     bus = BusFalso(PLACAS.values())
     act = P.ActuadoresPCA9685(bus=bus)
     sim = Simulador(act, semilla=5)
@@ -423,8 +423,7 @@ def probar_motores():
 def probar_en_marcha():
     """Los tres hilos juntos, en tiempo real, y el apagado ordenado."""
     print("\n  EN MARCHA (8 segundos en tiempo real)")
-    sys.path.insert(0, os.path.join(os.path.dirname(AQUI), "raspberry_pi5"))
-    from hilo_simulacion import HiloSimulacion
+    from h08.simulacion.hilo import HiloSimulacion
     bus = BusFalso(PLACAS.values())
     act = P.ActuadoresPCA9685(bus=bus)
     rotor = RotoresFalsos()

@@ -19,14 +19,14 @@ import os
 import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(RAIZ, "nucleo"))
+sys.path.insert(0, RAIZ)          # hasta pasar a unittest (fase 4)
 
-from utiles import interpolar_tabla                      # noqa: E402
-from configuracion import TABLERO, TABLERO_POR_ID                # noqa: E402
-from actuadores_simulados import ActuadoresSimulados                          # noqa: E402
-from simulador import Simulador, MODO_DETENIDO              # noqa: E402
-from fallas import CATALOGO                            # noqa: E402
-from escenarios import ESCENARIOS, PERFIL_NORMAL          # noqa: E402
+from h08.util import interpolar_tabla  # noqa: E402
+from h08.config import TABLERO, TABLERO_POR_ID  # noqa: E402
+from h08.hardware.simulado import ActuadoresSimulados  # noqa: E402
+from h08.simulacion.simulador import Simulador, MODO_DETENIDO  # noqa: E402
+from h08.simulacion.fallas import CATALOGO  # noqa: E402
+from h08.simulacion.escenarios import ESCENARIOS, PERFIL_NORMAL  # noqa: E402
 
 DT = 1.0 / 20.0
 

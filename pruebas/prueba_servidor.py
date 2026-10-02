@@ -12,7 +12,7 @@ Lo que se comprueba no es que los botones esten escondidos. Es que el
 SERVIDOR conteste 403 cuando la orden no viene de un administrador. Esconder
 los botones no protege nada: cualquiera abre la consola del navegador.
 
-    python3 prueba_servidor.py
+    python3 pruebas/prueba_servidor.py
 """
 import http.client
 import json
@@ -22,14 +22,11 @@ import tempfile
 import threading
 import time
 
-AQUI = os.path.dirname(os.path.abspath(__file__))
-for _c in (os.path.join(AQUI, "..", "nucleo"), os.path.join(AQUI, "nucleo")):
-    if os.path.isdir(_c):
-        sys.path.insert(0, os.path.abspath(_c))
-        break
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)          # hasta pasar a unittest (fase 4)
 
-from acceso import Acceso                                    # noqa: E402
-import servidor_web                                       # noqa: E402
+from h08.web.acceso import Acceso  # noqa: E402
+from h08.web import servidor as servidor_web  # noqa: E402
 
 fallos = []
 
