@@ -98,7 +98,7 @@ reacciona todo el tablero, en el tablero físico y en una página web.
 
 Libres: PCA0:8, PCA0:12, PCA1:6, PCA1:7, PCA1:14, PCA1:15. Sólo en la página (sin
 actuador): TACH_ROT, SLIP, ALTIMETER_100. El reloj es mecánico (sólo página).
-La fuente de verdad de esta tabla es `h08/config/` (`TABLERO`): si
+La fuente de verdad de esta tabla es `h08/config/tablero.py` (`TABLERO`): si
 algo de acá difiere, manda el código.
 
 ### 3.3 Luces
@@ -133,7 +133,8 @@ H08_Pi5/
 ├── h08/             EL PROGRAMA: python3 -m h08 (paquete, imports absolutos)
 │   ├── __main__.py  arranca el tablero y despacha los subcomandos
 │   ├── rutas.py     dónde está cada archivo (una sola definición)
-│   ├── config/      el tablero en datos (hoy entero en __init__.py)
+│   ├── config/      el tablero en datos: aeronave, tablero (TABLERO y tablas cal),
+│   │                mecanica, hardware (placas, pines, motor), panel (página web)
 │   ├── simulacion/  modelo, señales, fallas, escenarios, simulador, hilo (20 Hz)
 │   ├── hardware/    base, pca9685, simulado, paso_a_paso, mapa
 │   ├── web/         servidor, acceso (clave), qr, static/ (tablero.html,

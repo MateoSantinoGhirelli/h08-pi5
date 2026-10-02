@@ -77,9 +77,16 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
   calibración, posición del motor, `informes/`), fuera de git y del zip. Si quedaron
   datos en `raspberry_pi5/` (versión vieja), el tablero los pasa a `datos/` al
   arrancar sin pisar nada (`rutas.migrar_datos_viejos`).
-- `h08/config/` (hoy entero en `__init__.py`): el tablero en datos. `TABLERO` (30
-  entradas), `BARRIDO`, `ENGRANAJES`, `HORIZONTE`, `PLACAS` (PCA0 0x40, PCA1 0x41),
-  `SERVO_CFG` (500–2500 µs), `LUCES_ACTIVAS_EN_BAJO`, `MOTORES`, `ARRANQUE`.
+- `h08/config/`: el tablero en datos, un archivo por tema. `__init__.py` reexporta
+  todo (el resto importa siempre `from h08.config import ...`):
+  - `aeronave.py`: `AERONAVE`, `LIM` (límites físicos del H-19A);
+  - `tablero.py`: `SERVO`/`MOTOR`/`LED`, `TABLERO` (30 entradas con su tabla `cal`
+    y su canal), `TABLERO_POR_ID`;
+  - `mecanica.py`: `BARRIDO`, `CENTRO_ESCALA`, `ENGRANAJES`, `HORIZONTE`,
+    `reduccion()`, `invertido()`, `factor_servo()`;
+  - `hardware.py`: `LAZO`, `ARRANQUE`, `PLACAS` (PCA0 0x40, PCA1 0x41), `SERVO_CFG`
+    (500–2500 µs), `LUCES_ACTIVAS_EN_BAJO`, `MOTOR_CFG`, `MOTORES`;
+  - `panel.py`: geometría y textos de la página (`PANEL`, `ANUNCIADOR`, ...).
 - `h08/rutas.py`: dónde está cada archivo (datos, página, `VERSION.txt`, scripts).
 - Flujo cada 50 ms: `simulacion/modelo` + `fallas` + `escenarios` → `simulacion/simulador`
   → `simulacion/senales` (real vs indicado) → `hardware/mapa` → `hardware/pca9685`

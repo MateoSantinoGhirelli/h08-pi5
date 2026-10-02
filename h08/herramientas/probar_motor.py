@@ -21,7 +21,7 @@ Con el servicio detenido (sudo systemctl stop tablero-h08):
     python3 -m h08 motor 1 --vueltas 10        diez vueltas y vuelve: la aguja
                                                tiene que quedar donde estaba
 
-SI GIRA AL REVÉS: cambiar el 'sentido' de ese motor en h08.config.MOTORES
+SI GIRA AL REVÉS: cambiar el 'sentido' de ese motor en MOTORES (h08/config/hardware.py)
 (+1 por -1 o al revés). No hace falta tocar cables.
 
 SI TIEMBLA Y NO GIRA: los cables IN1..IN4 están cruzados. Con --bobinas los

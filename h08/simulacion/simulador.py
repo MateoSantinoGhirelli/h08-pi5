@@ -599,7 +599,7 @@ class Simulador:
                 "fallas": fallas, "escenarios": escenarios, "fases": fases,
                 "anunciador": ANUNCIADOR,
                 # Geometría del tablero: viaja en el catálogo para que la
-                # página no repita ningún número. Se edita en h08/config.
+                # página no repita ningún número. Se edita en h08/config/panel.py.
                 "lienzo": PANEL_LIENZO,
                 "zonas": PANEL_ZONAS,
                 "conmutadores": PANEL_CONMUTADORES,

@@ -229,7 +229,7 @@ Si en la Raspberry todavía está la versión vieja (la de `raspberry_pi5/tabler
 
 ## Cómo funcionan las luces
 
-- En la placa, el ánodo de cada LED va a +5 V y el cátodo va, por su resistencia de 220 Ω, a una salida del PCA9685. **La luz enciende con la salida en BAJO.** El programa ya lo tiene en cuenta (`LUCES_ACTIVAS_EN_BAJO` en `h08/config`).
+- En la placa, el ánodo de cada LED va a +5 V y el cátodo va, por su resistencia de 220 Ω, a una salida del PCA9685. **La luz enciende con la salida en BAJO.** El programa ya lo tiene en cuenta (`LUCES_ACTIVAS_EN_BAJO` en `h08/config/hardware.py`).
 - **Al dar energía, las seis luces se encienden** hasta que arranca el servicio, unos 20 a 30 segundos. Es normal y sirve de prueba de lámparas del encendido: la que no prende ahí tiene el LED o el cable cortado.
 - Cada luz se enciende por **su** condición del modelo (ver la tabla de canales). Si la barra eléctrica cae por debajo de 20 V, se apagan todas, como en el avión.
 - La **prueba de lámparas del mando** enciende las seis en el tablero **y** en la página, que ahora muestra lo que tienen las luces de verdad.
@@ -251,7 +251,7 @@ Todos los comandos, desde `~/H08_Pi5`.
 | La aguja marca corrido | `python3 -m h08 canal ESA --valor V` y calzar la aguja |
 | Zumba contra un tope | `python3 -m h08 calibrar PCA0 N --asistente` |
 | Las placas se reinician cuando se mueven muchas agujas | Es la fuente de servos: el LM2596 da 3 A como máximo. `python3 -m h08 prueba-general` (A3) lo muestra |
-| La brújula gira al revés | `sentido` en `MOTORES` (`h08/config`) |
+| La brújula gira al revés | `sentido` en `MOTORES` (`h08/config/hardware.py`) |
 | La brújula tiembla y no gira | `python3 -m h08 motor 1 --bobinas`: las bobinas tienen que ir en orden A-B-C-D |
 | El celular no ve la red | `sudo bash deploy/punto_de_acceso.sh estado` (y el país del wifi: lo pone solo) |
 
@@ -271,7 +271,8 @@ H08_Pi5/
 ├── h08/                      el programa: python3 -m h08
 │   ├── __main__.py           el tablero y los subcomandos
 │   ├── rutas.py              dónde está cada archivo
-│   ├── config/               el tablero en datos: canales, escalas, calibraciones
+│   ├── config/               el tablero en datos: canales, escalas, calibraciones,
+│   │                         placas, pines y la geometría de la página
 │   ├── simulacion/           el modelo de vuelo, las fallas y los escenarios
 │   ├── hardware/             las placas PCA9685 y el motor paso a paso
 │   ├── web/                  el servidor, la clave del profesor, los QR y la página

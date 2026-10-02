@@ -132,7 +132,7 @@ def interpolar_tabla(x, tabla):
 
     En vez de modelar cada mecanismo, se mide dónde cae cada marca de la
     esfera y se carga la tabla. Recalibrar un instrumento es corregir su
-    tabla en h08/config, sin tocar la lógica.
+    tabla en h08/config/tablero.py, sin tocar la lógica.
 
     La tabla debe estar ordenada de menor a mayor en x.
     """

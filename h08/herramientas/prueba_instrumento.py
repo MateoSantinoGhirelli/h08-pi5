@@ -150,7 +150,7 @@ ARREGLOS = {
             "      Si llega bien a un extremo y no al otro, o zumba en un tope:\n"
             "        python3 -m h08 calibrar {canal} --asistente\n"
             "      Si no se mueve: python3 -m h08 diagnostico y el cable del canal {canal}."),
-    MOTOR: ("Si gira al revés: 'sentido' en h08.config.MOTORES.\n"
+    MOTOR: ("Si gira al revés: 'sentido' en MOTORES (h08/config/hardware.py).\n"
             "      Si queda corrida: python3 -m h08 motor 1 --mover -5 y después --cero.\n"
             "      Si tiembla y no gira: python3 -m h08 motor 1 --bobinas (orden A-B-C-D)."),
     LED: ("Si no prende: LED al revés, o el cable de J7/J8. Probar el LED solo con\n"

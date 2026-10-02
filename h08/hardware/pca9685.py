@@ -34,7 +34,7 @@ transacción: dirección del registro seguida de los datos.
 
 CUIDADOS
 ---------------------------------------------------------------------------
-  * Luces invertidas: ver LUCES_ACTIVAS_EN_BAJO en h08/config.
+  * Luces invertidas: ver LUCES_ACTIVAS_EN_BAJO en h08/config/hardware.py.
   * Si el PCA9685 se reinicia (una caída de tensión fuerte), vuelve dormido,
     sin autoincremento y con todas las salidas en bajo. Cada dos segundos se
     lee MODE1; si el chip se reinició, se lo vuelve a configurar y se le

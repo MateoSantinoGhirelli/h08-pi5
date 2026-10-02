@@ -157,7 +157,7 @@ def motor(gestor, P, inf):
             malos.append(letra)
     if malos:
         inf.mal(S_MOT, "N-E-S-O-N", "no apunta a " + ", ".join(malos) +
-                ". Si gira al revés: 'sentido' en h08.config.MOTORES")
+                ". Si gira al revés: 'sentido' en MOTORES (h08/config/hardware.py)")
     else:
         inf.bien(S_MOT, "N-E-S-O-N")
 
