@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-h08/hardware/simulado.py - salida sin hardware
-==============================================
+"""Salidas sin hardware: guardan el último valor de cada canal y cuentan las escrituras.
 
-No mueve nada: guarda el último valor escrito en cada canal y cuenta las
-escrituras. Sirve para:
-
-  1. Correr el tablero completo en una computadora común, sin placas.
-  2. Verificar la calibración: se puede leer el ángulo de cada aguja antes
-     de conectar un solo servo.
-  3. Probar el programa: las pruebas automáticas comparan estos valores.
+Con ellas el tablero corre entero en una computadora sin placas, se puede leer el
+ángulo de cada aguja antes de conectar un servo y las pruebas comparan valores.
 """
 
 import logging

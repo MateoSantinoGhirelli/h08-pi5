@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-banco.py - lo que comparten las herramientas de prueba de la Raspberry
-======================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Lo que comparten las herramientas que manejan las placas directo.
 
-Lo usan probar_canal.py, calibrar_servo.py y probar_motor.py:
-
-  * aviso si el servicio del tablero está andando (dos programas escribiendo
-    las mismas placas a la vez se pisan);
-  * traducir lo que escribe el usuario ("PCA0 3" o "AIRSPEED") a un canal.
+Exigen el servicio detenido, porque dos programas escribiendo las mismas placas
+se pisan, y traducen lo que escribe la persona («PCA0 3» o «AIRSPEED») a un canal.
 """
 
 import subprocess

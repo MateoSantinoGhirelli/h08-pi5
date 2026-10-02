@@ -1,25 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-h08/simulacion/hilo.py - la simulación en su propio hilo
-====================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""La simulación y las placas, a 20 Hz, en su propio hilo.
 
-En la Raspberry conviven tres trabajos con tiempos distintos:
-
-  * la simulación y las placas PCA9685, a 20 Hz y sin saltos (este hilo);
-  * los motores paso a paso, cada milisegundo (su propio hilo, paso_a_paso.py);
-  * el servidor web, que atiende pedidos cuando llegan (hilo principal).
-
-El servidor se comunica con este hilo de dos maneras solamente:
-
-  * MANDA órdenes por una cola (queue.Queue ya es segura entre hilos);
-  * LEE la última foto del estado, que se reemplaza entera de una vez (una
-    asignación de referencia es atómica en Python).
-
-Si una vuelta del lazo falla (un error de bus, un error de programa), el
-error se cuenta y se informa, y el lazo sigue: el tablero no se queda
-congelado delante del público.
+El servidor web le habla sólo de dos maneras: le manda órdenes por una cola y
+lee la última «foto» del estado, que se reemplaza entera (asignar una referencia
+es atómico en Python, así que nunca ve una foto a medio armar). Un error en una
+vuelta del lazo se cuenta y se anota, y el lazo sigue: el tablero no se congela
+delante del público.
 """
 
 import logging
@@ -47,14 +33,12 @@ class HiloSimulacion(threading.Thread):
         self._parar = threading.Event()
         self._periodo_foto = 1.0 / LAZO["hz_telemetria"]
 
-    # -- para el servidor web ----------------------------------------------
     def ordenar(self, accion, valor=None):
         self.cola.put((accion, valor))
 
     def detener(self):
         self._parar.set()
 
-    # -- hilo ----------------------------------------------------------------
     def run(self):
         sim = self.sim
         sim.modo_normal()
@@ -69,8 +53,7 @@ class HiloSimulacion(threading.Thread):
                         break
                     self._ejecutar(accion, valor)
 
-                # El simulador calcula cuántos pasos fijos de 50 ms le
-                # corresponden al tiempo real transcurrido y escribe las placas.
+                # tantos pasos fijos de 50 ms como tiempo real pasó, y escribe las placas
                 sim.servicio()
 
                 ahora = time.monotonic()
@@ -88,7 +71,7 @@ class HiloSimulacion(threading.Thread):
                 time.sleep(0.2)
             time.sleep(0.005)
 
-        # Apagado en orden: luces apagadas, servos sin pulso, motores a cero.
+        # luces apagadas, servos sin pulso, motores a cero
         try:
             sim.mapa.apagar()
         except Exception:
@@ -105,7 +88,6 @@ class HiloSimulacion(threading.Thread):
             d.update(salud())
         return d
 
-    # -- órdenes -------------------------------------------------------------
     def _ejecutar(self, accion, valor):
         sim = self.sim
         if accion == "modo_normal":

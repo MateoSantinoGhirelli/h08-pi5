@@ -1,46 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-h08/util.py - reloj, azar reproducible y matemática común
-========================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
-
-Herramientas que usa todo el núcleo: el reloj monotónico, el generador de
-números pseudoaleatorios, el filtro de primer orden, el limitador de
-velocidad y la interpolación de las tablas de calibración. Ningún otro
-módulo las vuelve a implementar.
-"""
+"""Reloj, azar reproducible, filtros y la interpolación de las tablas de calibración."""
 
 import time as _t
 
-# ---------------------------------------------------------------------------
-# RELOJ MONOTÓNICO EN MILISEGUNDOS
-# ---------------------------------------------------------------------------
-# Se usa un reloj monotónico y no la hora del sistema: si se corrige la hora
-# de la Raspberry Pi mientras el tablero funciona, la simulación no se altera.
-# ---------------------------------------------------------------------------
+# Monotónico y no la hora del sistema: si se corrige la hora de la Pi con el
+# tablero andando, la simulación no salta.
 _T0 = _t.monotonic()
 
 
 def ticks_ms():
-    """Milisegundos transcurridos desde que arrancó el programa."""
+    """Milisegundos desde que arrancó el programa."""
     return int((_t.monotonic() - _T0) * 1000)
 
 
 def ticks_diff(a, b):
-    """Diferencia entre dos lecturas de ticks_ms(), en milisegundos."""
     return a - b
 
 
-# ---------------------------------------------------------------------------
-# GENERADOR PSEUDOALEATORIO REPRODUCIBLE (congruencial lineal de 32 bits)
-# ---------------------------------------------------------------------------
-# Con la misma semilla se obtiene siempre el mismo vuelo, con las mismas
-# vibraciones de aguja. Así una demostración que salió bien en la prueba sale
-# igual delante del curso, y las pruebas automáticas pueden comparar
-# resultados exactos.
-# ---------------------------------------------------------------------------
 class Aleatorio:
+    """Congruencial lineal de 32 bits, reproducible.
+
+    Con la misma semilla sale el mismo vuelo con las mismas vibraciones de aguja:
+    una demostración que anduvo en la prueba sale igual delante del curso, y las
+    pruebas automáticas comparan resultados exactos.
+    """
     __slots__ = ("_s",)
 
     def __init__(self, semilla=20250819):
@@ -50,7 +33,7 @@ class Aleatorio:
         self._s = semilla & 0xFFFFFFFF
 
     def _siguiente(self):
-        # Constantes de Numerical Recipes
+        # constantes de Numerical Recipes
         self._s = (1664525 * self._s + 1013904223) & 0xFFFFFFFF
         return self._s
 
@@ -66,11 +49,7 @@ class Aleatorio:
 RNG = Aleatorio()
 
 
-# ---------------------------------------------------------------------------
-# MATEMÁTICA DE USO GENERAL
-# ---------------------------------------------------------------------------
 def limitar(x, minimo, maximo):
-    """Satura x al intervalo [mínimo, máximo]."""
     if x < minimo:
         return minimo
     if x > maximo:
@@ -79,22 +58,16 @@ def limitar(x, minimo, maximo):
 
 
 def mezclar(a, b, k):
-    """Interpolación lineal: k=0 devuelve a, k=1 devuelve b."""
+    """Interpolación lineal: k=0 da a, k=1 da b."""
     return a + (b - a) * k
 
 
 def aproximar(actual, objetivo, dt, tau):
-    """
-    Filtro pasabajos de primer orden (retardo exponencial).
+    """Filtro de primer orden: actual persigue a objetivo con constante de tiempo tau (s).
 
-    Es la base de toda la dinámica del simulador: cada magnitud física
-    «persigue» a su objetivo con una constante de tiempo tau, en segundos.
-
-        tau chico  → responde rápido (presión de aceite, régimen del motor)
-        tau grande → responde lento  (temperatura de culata, de aceite)
-
-    Se usa la forma discreta x += (obj - x) · dt/(tau+dt), que es estable
-    aunque el paso de tiempo se agrande.
+    Es la base de la dinámica del simulador: tau chico para la presión de aceite o
+    el régimen, tau grande para las temperaturas. La forma x += (obj - x)·dt/(tau+dt)
+    sigue siendo estable aunque el paso de tiempo se agrande.
     """
     if tau <= 0.0:
         return objetivo
@@ -103,12 +76,10 @@ def aproximar(actual, objetivo, dt, tau):
 
 
 def rampa(actual, objetivo, dt, velocidad):
-    """
-    Limitador de velocidad de cambio, en unidades por segundo.
+    """Avanza hacia objetivo a velocidad constante (unidades por segundo).
 
-    A diferencia de aproximar(), avanza a velocidad constante. Protege a los
-    servos de los saltos bruscos: un servo al que se le ordena cruzar la
-    esfera de golpe castiga el engranaje y puede desprender la aguja.
+    Un servo al que se le ordena cruzar la esfera de golpe castiga el engranaje y
+    puede desprender la aguja.
     """
     paso = velocidad * dt
     d = objetivo - actual
@@ -120,21 +91,13 @@ def rampa(actual, objetivo, dt, velocidad):
 
 
 def interpolar_tabla(x, tabla):
-    """
-    Interpolación lineal a trozos sobre una tabla [(x0,y0), (x1,y1), …].
+    """Interpolación lineal a trozos sobre [(x0, y0), (x1, y1), ...], ordenada en x.
 
-    Es el corazón de la calibración de los instrumentos. Las esferas
-    aeronáuticas no son lineales:
-      • el velocímetro comprime el extremo inferior, porque la presión
-        dinámica crece con el cuadrado de la velocidad;
-      • los aforadores de combustible siguen la forma del tanque;
-      • los manómetros de tubo Bourdon tienen su propia no linealidad.
-
-    En vez de modelar cada mecanismo, se mide dónde cae cada marca de la
-    esfera y se carga la tabla. Recalibrar un instrumento es corregir su
-    tabla en h08/config/tablero.py, sin tocar la lógica.
-
-    La tabla debe estar ordenada de menor a mayor en x.
+    Las esferas aeronáuticas no son lineales (el velocímetro comprime el extremo
+    bajo porque la presión dinámica va con V²; los aforadores siguen la forma del
+    tanque): en vez de modelar cada mecanismo, la tabla dice dónde cae cada marca.
+    Las carátulas impresas están dibujadas con estas tablas, así que una aguja que
+    no cae en su marca se calza o se calibra el servo; la tabla no se toca.
     """
     n = len(tabla)
     if n == 0:
@@ -143,7 +106,7 @@ def interpolar_tabla(x, tabla):
         return tabla[0][1]
     if x >= tabla[n - 1][0]:
         return tabla[n - 1][1]
-    # Búsqueda lineal: las tablas tienen entre 3 y 13 puntos.
+    # búsqueda lineal: las tablas tienen entre 3 y 13 puntos
     i = 1
     while i < n and tabla[i][0] < x:
         i += 1

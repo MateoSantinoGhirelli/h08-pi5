@@ -1,30 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-empaquetar.py - arma el zip para llevar a la Raspberry
-======================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
+"""Arma dist/H08_Pi5.zip para llevar a la Raspberry en un pendrive.
 
-En la computadora (Windows: py empaquetar.py, Linux/Mac: python3 empaquetar.py):
-
-    py empaquetar.py                  corre las pruebas y, si pasan, arma
-                                      dist/H08_Pi5.zip
+    py empaquetar.py                  corre las pruebas y, si pasan, arma el zip
     py empaquetar.py --sin-pruebas    lo arma sin correr las pruebas
     py empaquetar.py --salida E:\\     lo deja directo en el pendrive
 
-En la Raspberry, la primera vez: descomprimirlo y  bash deploy/instalar.sh
-Las siguientes:                  bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
+En la Pi, la primera vez: bash deploy/instalar.sh; las siguientes:
+bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
 
-El zip lleva h08/ (el programa), deploy/ (los scripts de la Pi) y pruebas/.
-No lleva datos/ (ni raspberry_pi5/, donde estaban antes): son de cada tablero.
-
-Tres cuidados que hace solo:
-  * NUNCA mete secreto_admin.json, calibracion_servos.json ni
-    posicion_motores.json (son de cada tablero): si aparecen, se niega.
-  * Pasa los fines de línea a LF. En Windows los archivos pueden quedar con
-    CRLF, y en la Raspberry bash falla con "$'\\r': command not found".
-  * Escribe VERSION.txt con la fecha y una huella del contenido: la muestra
-    el tablero al arrancar, así se sabe qué versión tiene cada Pi.
+Lleva h08/, deploy/ y pruebas/; nunca datos/ ni los archivos privados (si se
+cuela uno, borra el zip). Pasa los fines de línea a LF, porque con CRLF bash
+falla en la Pi con "$'\\r': command not found", y escribe VERSION.txt con la
+fecha y una huella del contenido, que el tablero muestra al arrancar.
 """
 import argparse
 import datetime
