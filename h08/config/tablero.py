@@ -1,42 +1,26 @@
 # -*- coding: utf-8 -*-
-"""Los instrumentos del tablero: escala, tabla de calibración y canal de cada uno."""
+"""Los instrumentos del tablero: escala, tabla de calibración y canal de cada uno.
+
+Cada entrada de TABLERO es un actuador (o una aguja que sólo dibuja la página):
+  n        número del instrumento en la lista de 33 del anteproyecto
+  senal    variable del modelo de vuelo que lo mueve
+  escala   (mínimo, máximo) de la esfera; arcos: (desde, hasta, color) para la página
+  cal      [(valor, ángulo 0..180)]: dónde cae cada marca de la carátula impresa
+  tau      inercia de la aguja en s; slew: velocidad máxima en grados/s
+  canal    ("PCA0", 7), ("MOTOR", 1), o None si sólo está en la página
+Las tablas cal son las de las carátulas impresas: una aguja corrida se calza o se
+calibra el servo, la tabla no se toca (docs/mecanica.md).
+"""
 
 from h08.config.mecanica import tabla_alabeo, tabla_cabeceo
 
-# ===========================================================================
-# 3. TIPOS DE ACTUADOR
-# ===========================================================================
 SERVO = "SERVO"          # servo de 180 grados sobre una placa PCA9685
 MOTOR = "MOTOR"          # paso a paso 28BYJ-48 de giro continuo, con plaquita ULN2003
 LED = "LED"              # luz de alerta, encendida o apagada, sobre PCA9685
 
-# ===========================================================================
-# 4. DEFINICIÓN DEL TABLERO
-# ===========================================================================
-# Cada entrada describe UN actuador físico. Los campos son:
-#
-#   n         : número del instrumento en la lista de 33 del anteproyecto
-#   nombre    : denominación en castellano
-#   en        : denominación original en inglés
-#   senal     : variable del modelo de vuelo que lo alimenta
-#   unidad    : unidad de ingeniería
-#   escala    : (mínimo, máximo) de la esfera del instrumento
-#   arcos     : lista de (desde, hasta, color) para dibujar la página web
-#   actuador  : SERVO | MOTOR | LED
-#   cal       : tabla [(valor, ángulo_actuador)], ver h08.util.interpolar_tabla
-#   tau       : constante de tiempo de la aguja en segundos (inercia)
-#   slew      : velocidad máxima de la aguja en grados/segundo
-#   canal     : (placa, canal) donde está conectado: ("PCA0", 7), ("MOTOR", 1)
-#
-# El campo 'cal' hace que el tablero sea calibrable: para ajustar un
-# instrumento se corrige su tabla, no el código.
-# ===========================================================================
-
 TABLERO = [
 
-    # -----------------------------------------------------------------------
-    # GRUPO MOTOPROPULSOR
-    # -----------------------------------------------------------------------
+    # grupo motopropulsor
     {
         "id": "FUEL_QTY_FWD", "n": 2,
         "nombre": "Cantidad de combustible - tanque delantero",
@@ -99,9 +83,7 @@ TABLERO = [
         "canal": ("PCA0", 5),
     },
 
-    # -----------------------------------------------------------------------
-    # INSTRUMENTOS DE VUELO
-    # -----------------------------------------------------------------------
+    # instrumentos de vuelo
     {
         "id": "AIRSPEED", "n": 10,
         "nombre": "Velocímetro",
@@ -240,9 +222,7 @@ TABLERO = [
         "canal": ("PCA0", 15),
     },
 
-    # -----------------------------------------------------------------------
-    # PRESIÓN DE ADMISIÓN, TRANSMISIÓN Y SISTEMA ELÉCTRICO
-    # -----------------------------------------------------------------------
+    # presión de admisión, transmisión y sistema eléctrico
     {
         "id": "MAP", "n": 23,
         "nombre": "Presión de admisión",
@@ -309,9 +289,7 @@ TABLERO = [
         "canal": ("PCA1", 5),
     },
 
-    # -----------------------------------------------------------------------
-    # LUCES DE ALERTA
-    # -----------------------------------------------------------------------
+    # luces de alerta
     {
         "id": "LT_FUEL_FWD", "n": 8,
         "nombre": "Luz de advertencia combustible delantero",
@@ -368,7 +346,6 @@ TABLERO = [
     },
 ]
 
-# Índice por id, para buscar un instrumento sin recorrer la lista
 TABLERO_POR_ID = {}
 for _it in TABLERO:
     TABLERO_POR_ID[_it["id"]] = _it

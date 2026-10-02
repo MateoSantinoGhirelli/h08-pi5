@@ -1,63 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Geometría y textos del tablero en la página web (no los usa la simulación)."""
+"""Geometría y textos del tablero en la página web; la simulación no los usa.
 
-# ===========================================================================
-# 7. GEOMETRÍA DEL TABLERO Y DESCRIPCIONES
-# ===========================================================================
-# Estos datos NO los usa la simulación: los usa el panel visual de la aplicación web
-# para dibujar el tablero y para explicar cada instrumento.
-#
-# DE DONDE SALE CADA COSA
-# --------------------------------------------------------------------------
-# La DISPOSICIÓN (que va a la izquierda, que al centro, que arriba a la
-# derecha, el tamaño relativo de cada instrumento) está copiada de la
-# fotografía de cabina de un S-55 aportada para el proyecto. La foto se usa
-# como referencia de UBICACIÓN.
-#
-# El CONTENIDO de cada instrumento -que mide, en que unidad, con que escala,
-# con que arcos de color y en qué canal del PCA9685 va- NO sale de la foto:
-# sale del reporte de aviónica del H-08 y del manual T.O. 1H-19A-1. Por eso
-# el tablero dibujado tiene los 21 instrumentos del proyecto aunque en la
-# foto se distingan menos.
-#
-# Donde la foto y el reporte no coinciden manda el reporte, porque no esta
-# confirmado que la fotografía sea de esta misma célula.
-# --------------------------------------------------------------------------
-#
-# CAMPOS
-#   desc  : para qué sirve, tomado del reporte de aviónica del H-08
-#   zona  : agrupador según la columna "UBICACIÓN EN CABINA" del reporte
-#   dial  : que tipo de esfera hay que dibujar
-#   pos   : (x, y) de la esquina superior izquierda, en el lienzo del panel
-#   tam   : diámetro en unidades del lienzo, PROPORCIONAL a la boca real del
-#           tablero (1,79 unidades por mm). Bocas medidas en la chapa del H-08:
-#               122 mm x 2  ->  218    horizonte artificial y brújula
-#                78 mm x 7  ->  140    velocímetro, altímetro, variómetro,
-#                                      viraje, tacómetro, admisión, AN/ARN-14
-#                58 mm x 3  ->  104    los dos aforadores y culata
-#                48 mm x 9  ->   86    los otros seis de motor y transmisión,
-#                                      amperímetro, voltímetro y reloj
-#
-# Tipos de esfera:
-#   "aguja"     esfera redonda común con una aguja
-#   "tacometro" dos agujas concéntricas con dos escalas (motor y rotor)
-#   "altimetro" tres agujas: decenas de miles, miles y centenas de pies
-#   "horizonte" horizonte artificial
-#   "viraje"    aguja de viraje + bola de ladeo
-#   "brujula"   tarjeta giratoria bajo línea de fe
-#   "cdi"       aguja vertical de desvio de radial
-#   "reloj"     tres agujas de reloj
-#   "luz"       anunciador rectangular
-# ===========================================================================
+La disposición sale de una foto de cabina de un S-55 y el contenido, del reporte de
+aviónica del H-08 y del T.O. 1H-19A-1; los tamaños son proporcionales a las bocas de
+la chapa (1,79 unidades por mm). Campos, medidas y tipos de esfera: docs/panel.md.
+"""
 
-# Lienzo de referencia. La app escala este lienzo para que entre en la
-# ventana, así que estos números son unidades de diseño, no pixeles fijos.
+# unidades de diseño: la página escala el lienzo a la ventana
 PANEL_LIENZO = (1340, 680)
 
-# --- Las cinco regiones físicas del tablero, tal como se ven en la foto ----
-#   estilo "verde"   : chapa estructural pintada de verde militar
-#   estilo "negro"   : sub-panel negro atornillado sobre la estructura
-#   estilo "consola" : consola de radio bajo el tablero
+# estilo "verde": chapa estructural pintada; "negro": sub-panel atornillado encima
 PANEL_ZONAS = [
     {"id": "SW",   "estilo": "verde", "pos": (10, 10),   "tam": (292, 452),
      "titulo": "CONMUTADORES  ·  BATERÍA Y LUCES"},
@@ -69,7 +21,7 @@ PANEL_ZONAS = [
 ]
 
 PANEL = {
-    # ---- Columna de motor, transmisión y combustible (bocas de 48 y 58) --
+    # columna de motor, transmisión y combustible (bocas de 48 y 58 mm)
     "AMMETER":         {"zona": "MOTOR",  "dial": "aguja",     "pos": (327, 551),  "tam": 86,
                         "desc": "Muestra la corriente eléctrica de carga o descarga de la "
                                 "batería. Negativo significa que la batería se está gastando."},
@@ -108,10 +60,9 @@ PANEL = {
                         "desc": "Nivel de combustible disponible en el tanque trasero "
                                 "(322 litros de capacidad)."},
 
-    # ---- Sub-panel negro de vuelo (bocas de 78 y 122) ----------------------
-    # Arriba: velocímetro y los dos instrumentos grandes. En el medio:
-    # altímetro, tacómetro, viraje y AN/ARN-14. Abajo: variómetro, la luz
-    # LOW ROTOR bajo el tacómetro que vigila, y la presión de admisión.
+    # sub-panel negro de vuelo (bocas de 78 y 122 mm): arriba el velocímetro y los
+    # dos grandes; en el medio altímetro, tacómetro, viraje y AN/ARN-14; abajo el
+    # variómetro, la luz LOW ROTOR bajo el tacómetro que vigila y la admisión
     "AIRSPEED":        {"zona": "VUELO", "dial": "aguja",     "pos": (662, 30),  "tam": 140,
                         "desc": "Indica la velocidad del helicóptero respecto al aire. "
                                 "Vne del H-19A: 95 nudos. Es un instrumento NEUMÁTICO: "
@@ -145,10 +96,8 @@ PANEL = {
                                 "la aguja vertical muestra el desvio respecto del radial."},
 }
 
-# --- Instrumentos que se dibujan pero NO llevan actuador -------------------
-# El reloj de cabina del H-19A es mecánico: se le da cuerda, no se le manda
-# una señal. Ocupa un agujero del tablero y hay que dibujarlo para que el
-# panel se vea completo, pero no consume ningún canal del PCA9685.
+# Se dibujan pero no llevan actuador: el reloj del H-19A es mecánico (se le da cuerda),
+# ocupa una boca del tablero y no usa ningún canal.
 PANEL_VIRTUAL = [
     {"id": "CLOCK", "n": 21, "nombre": "Reloj de cabina",
      "en": "Cockpit clock, 8-day mechanical",
@@ -156,7 +105,7 @@ PANEL_VIRTUAL = [
      "actuador": "MECANICO", "senal": "t_sim", "cal": []},
 ]
 
-# --- Luces de alerta, en el orden en que van en el anunciador --------------
+# luces de alerta, en el orden del anunciador
 ANUNCIADOR = [
     {"id": "LT_FUEL_FWD", "pos": (546, 452), "tam": (88, 22),    "leyenda": "FUEL FWD",   "color": "ambar",
      "desc": "Bajo nivel de combustible en el tanque DELANTERO. Se enciende por debajo "
@@ -177,29 +126,9 @@ ANUNCIADOR = [
      "desc": "Magnetos activos. Indica que el circuito de encendido está energizado."},
 ]
 
-# ===========================================================================
-# 7b. PANEL DE CONMUTADORES
-# ===========================================================================
-# El tablero real del H-08 tiene, en su cuarto izquierdo, una chapa llena de
-# llaves, disyuntores y dos llaves con guarda roja. En el tablero físico esos
-# mandos van a quedar DECORATIVOS -no se cablean-, pero en la aplicación se dibujan
-# y se ANIMAN a partir del estado del simulador: cuando el programa energiza
-# la batería, la palanca de batería sube sola.
-#
-# Es la forma de mostrar, sin tocar nada, que hace el piloto virtual en cada
-# fase del vuelo.
-#
-# CAMPOS
-#   tipo    "placa"     chapa de identificación grabada
-#           "rotulo"    texto de grupo, grabado sobre la pintura
-#           "palanca"   llave a palanca de dos posiciones
-#           "guarda"    llave con tapa de seguridad roja
-#           "rotativo"  selector rotativo de varias posiciones
-#           "disyuntor" disyuntor térmico redondo (salta hacia afuera)
-#           "nota"      placa de texto explicativo
-#   señal   que campo del estado lo mueve (ver resolver en la app)
-#   inv     True si la llave está arriba cuando la señal es False
-# ===========================================================================
+# Las llaves del cuarto izquierdo del tablero: en el físico son decorativas, pero la
+# página las anima con el estado del simulador para mostrar qué hace el piloto
+# virtual en cada fase (tipos y campos en docs/panel.md).
 PANEL_CONMUTADORES = [
     {"tipo": "placa",  "pos": (20, 20),  "tam": (272, 22),
      "texto": "MAIN SWITCH PANEL", "sub": "H-19A"},
@@ -275,11 +204,6 @@ PANEL_CONMUTADORES = [
 
 ]
 
-# ===========================================================================
-# 7c. CHAPAS DE DATOS
-# ===========================================================================
-# Chapas de texto que la página puede dibujar sobre el tablero. Vacía: la
-# ficha de la aeronave y sus limitaciones están en la memoria técnica, y en
-# pantalla sólo van instrumentos.
-# ===========================================================================
+# Chapas de texto sobre el tablero. Vacía a propósito: la ficha y las limitaciones
+# están en la memoria técnica y en pantalla sólo van instrumentos.
 PANEL_PLACAS = []

@@ -117,10 +117,10 @@ valor → `interpolar_tabla(valor, cal)` (tabla en 0..180) → × `factor_servo(
   vuelta los pulsos (0° = 2500 µs).
 - Barrido ≤ 180°: aguja directa, el servo usa sólo `barrido` grados.
 - La carátula impresa y la página ponen la marca en
-  `ang_dibujo = centro + B/2 − a·B/180` (B ≥ 360: `centro − a`). Si se cambia un
-  barrido o una tabla `cal`, las carátulas se regeneran fuera de este proyecto
-  (con caratulas.py y caratulas_web.py, que no están en `h08/herramientas/`);
-  avisarle al usuario.
+  `ang_dibujo = centro + B/2 − a·B/180` (B ≥ 360: `centro − a`). Las carátulas (el
+  PDF impreso y sus SVG en `h08/web/static/caratulas/`) se hicieron aparte y **no hay
+  programa en el proyecto que las regenere**: no cambiar un barrido ni una tabla `cal`
+  sin avisarle antes al usuario (ver `docs/mecanica.md`).
 
 ## Hardware (para no inventar)
 
