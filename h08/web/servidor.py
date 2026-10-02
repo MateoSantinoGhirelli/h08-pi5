@@ -69,7 +69,8 @@ def datos_punto_de_acceso():
     """
     datos = {"red": "Tablero-H08", "clave": "", "ip": "10.55.0.1"}
     try:
-        texto = open(_SCRIPT_AP, encoding="utf-8").read()
+        with open(_SCRIPT_AP, encoding="utf-8") as f:
+            texto = f.read()
     except OSError:
         return datos
     for campo, var in (("red", "RED"), ("clave", "CLAVE"), ("ip", "IP")):
