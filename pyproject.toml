@@ -1,0 +1,21 @@
+# El tablero no se instala con pip: viaja como dist/H08_Pi5.zip y corre con
+# python3 -m h08 sobre la biblioteca estándar. Este archivo es sólo la ficha del
+# proyecto (nombre, versión, Python mínimo) y la configuración de ruff, que es
+# opcional y se usa únicamente en la computadora de desarrollo, nunca en la Pi.
+
+[project]
+name = "h08"
+version = "1.0.0"                 # la fuente es h08/__init__.py; test_documentacion.py avisa si se separan
+description = "Tablero didáctico del Sikorsky S-55 / H-19A (H-08) para la Raspberry Pi 5"
+readme = "README.md"
+requires-python = ">=3.9"         # la Pi trae 3.11; se prueba de 3.9 a 3.13
+authors = [{ name = "EEST N° 7 · Taller Regional Quilmes" }]
+dependencies = []                 # sólo biblioteca estándar; en la Pi, gpiozero y lgpio del sistema
+
+[tool.ruff]
+# ruff se corre a mano en la PC (pip install ruff; ruff check .). No hace falta en la Pi.
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]     # errores, pyflakes, avisos y orden de imports

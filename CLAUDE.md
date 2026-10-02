@@ -11,6 +11,8 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
   que tiene que estar instalado un programa en la Pi 5) es `CONTEXTO_PROYECTO.md`.
   Leerlo antes de cualquier cambio grande o de tocar instalación/arranque.
 - La guía para humanos está en `LEEME.md` (leerla cuando haga falta, no se carga sola).
+- `README.md` es la portada corta (GitHub); `CHANGELOG.md` lleva los cambios de cada
+  versión entregada; las explicaciones largas del modelo y el hardware están en `docs/`.
 
 ## Comandos (Windows: `py`; en la Pi: `python3`)
 

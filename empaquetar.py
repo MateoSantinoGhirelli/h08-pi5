@@ -9,8 +9,8 @@
 En la Pi, la primera vez: bash deploy/instalar.sh; las siguientes:
 bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
 
-Lleva h08/, deploy/ y pruebas/; nunca datos/ ni los archivos privados (si se
-cuela uno, borra el zip). Pasa los fines de línea a LF, porque con CRLF bash
+Lleva h08/, deploy/, pruebas/ y docs/; nunca datos/ ni los archivos privados (si
+se cuela uno, borra el zip). Pasa los fines de línea a LF, porque con CRLF bash
 falla en la Pi con "$'\\r': command not found", y escribe VERSION.txt con la
 fecha y una huella del contenido, que el tablero muestra al arrancar.
 """
@@ -25,8 +25,10 @@ import zipfile
 from h08 import rutas
 
 AQUI = rutas.RAIZ
-CARPETAS = ("h08", "deploy", "pruebas")
-SUELTOS = ("LEEME.md", "CLAUDE.md", "CONTEXTO_PROYECTO.md", ".claude/settings.json", "empaquetar.py", ".gitignore", ".gitattributes")
+CARPETAS = ("h08", "deploy", "pruebas", "docs")
+SUELTOS = ("README.md", "LEEME.md", "CHANGELOG.md", "CLAUDE.md", "CONTEXTO_PROYECTO.md",
+           "pyproject.toml", ".claude/settings.json", "empaquetar.py",
+           ".gitignore", ".gitattributes")
 PRIVADOS = set(rutas.PRIVADOS)
 FUERA_DIR = {"__pycache__", "informes", "datos", ".venv", ".git", "dist", ".claude"}
 FUERA_EXT = (".pyc", ".tmp", ".log", ".zip")
