@@ -143,7 +143,9 @@ H08_Pi5/
 │   │                calibrar_servo, banco, interactivo
 │   └── util.py
 ├── deploy/          instalar.sh, actualizar.sh, kiosco.sh, punto_de_acceso.sh
-├── pruebas/         correr_pruebas.py + 6 pruebas sin hardware
+├── pruebas/         pruebas automáticas con unittest, sin hardware: python3 -m pruebas
+│                    (test_vuelo, test_hardware, test_servidor, test_acceso, test_qr,
+│                    test_luces, test_web, test_rutas, test_config, test_comando, test_deploy)
 └── datos/           lo que escribe cada tablero (no está en git ni en el zip):
                      secreto_admin.json, calibracion_servos.json,
                      posicion_motores.json, informes/
@@ -301,7 +303,7 @@ leerlos y separar hardware de código.
 
 ## 6. Cómo se trabaja (en la computadora, con Windows)
 
-- `py pruebas/correr_pruebas.py` después de cada cambio. Todo tiene que dar
+- `py -m pruebas` después de cada cambio (`--rapido` saltea las lentas). Todo tiene que dar
   "Todas bien.".
 - `py -m h08 --simulado --sin-clave` (desde la raíz) y abrir
   `http://localhost:8000/` (`?kiosco=1`, `/mando`).
@@ -316,7 +318,7 @@ leerlos y separar hardware de código.
 1. Hace lo pedido y no cambia otra cosa.
 2. Sigue el formato de la sección 5 (stdlib, rutas relativas, servicio, LF…).
 3. Corre en Windows simulado y en la Pi (imports protegidos).
-4. Tiene su prueba en `pruebas/` y `correr_pruebas.py` da "Todas bien.".
+4. Tiene su prueba en `pruebas/test_*.py` y `py -m pruebas` da "Todas bien.".
 5. Si toca la página, se miró en `localhost:8000` (normal y `?kiosco=1`).
 6. Si cambia algo que ve el usuario o el procedimiento, se actualizó `LEEME.md`
    (y este documento si cambia el formato o el hardware).

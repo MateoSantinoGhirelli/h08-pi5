@@ -184,7 +184,7 @@ sudo systemctl start tablero-h08       # después
 
 Todas aceptan `--simulado --auto` para ver cómo son en una computadora, sin hardware.
 
-Las pruebas automáticas del programa (no necesitan hardware) están en `python3 pruebas/correr_pruebas.py`.
+Las pruebas automáticas del programa (no necesitan hardware) se corren con `python3 -m pruebas`, desde `~/H08_Pi5`. Terminan con «Todas bien.»; `python3 -m pruebas --rapido` saltea las que tardan.
 
 ---
 
@@ -282,7 +282,7 @@ H08_Pi5/
 │   ├── actualizar.sh         pasar a una versión nueva
 │   ├── kiosco.sh             el tablero en la pantalla de la Raspberry
 │   └── punto_de_acceso.sh    la red wifi propia
-├── pruebas/                  pruebas automáticas, sin hardware
+├── pruebas/                  pruebas automáticas, sin hardware: python3 -m pruebas
 └── datos/                    los datos de ESTE tablero (clave, calibración, posición
                               del motor, informes); no viaja en el zip ni se borra
                               al actualizar

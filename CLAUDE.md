@@ -14,8 +14,10 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 
 ## Comandos (Windows: `py`; en la Pi: `python3`)
 
-- Todas las pruebas: `py pruebas/correr_pruebas.py` (menos de 1 minuto, sin hardware)
-- Todo se corre desde la raíz del proyecto (`python3 -m h08` necesita ver la carpeta `h08/`).
+- Todo se corre desde la raíz del proyecto (`-m h08` y `-m pruebas` necesitan ver esas carpetas).
+- Todas las pruebas: `py -m pruebas` (un par de minutos, sin hardware; termina con
+  «Todas bien.»). Sin las lentas: `py -m pruebas --rapido` (unos 20 s). También anda
+  el estándar `py -m unittest -v`. Una sola: `py -m unittest pruebas.test_acceso -v`.
 - Ver el tablero: `py -m h08 --simulado --sin-clave`
   y abrir http://localhost:8000/ (pantalla de la Pi: `/?kiosco=1`, mando: `/mando`)
 - Herramientas: `py -m h08 --help` lista los subcomandos (`diagnostico`,
@@ -38,7 +40,7 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
   `datos/secreto_admin.json`, `calibracion_servos.json`, `posicion_motores.json` (en
   instalaciones viejas, los mismos en `raspberry_pi5/`). Para probar o levantar el
   tablero en la PC, siempre con `H08_DATOS` en una carpeta temporal
-  (`correr_pruebas.py` ya lo hace): así no hay mudanza ni se crea una clave.
+  (`pruebas/__init__.py` ya lo hace): así no hay mudanza ni se crea una clave.
 - Los datos del tablero (canales, escalas, calibraciones, barridos, pines, direcciones)
   viven SÓLO en `h08/config/`. No repetirlos en otro archivo.
 - Si una aguja física no cae en su marca, NO se toca la tabla `cal`: las carátulas
@@ -49,8 +51,10 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 - Los `.sh` corren en la Pi con bash: fin de línea LF, probarlos con `bash -n`.
 - Todo texto que ve una persona (mensajes, página, comentarios) va en castellano
   rioplatense (voseo), claro y sin jerga innecesaria.
-- Después de cada cambio: correr `py pruebas/correr_pruebas.py`. Si se agrega
-  algo, agregar su prueba en `pruebas/` (lo nuevo de la Pi va en `prueba_pi5.py`).
+- Después de cada cambio: correr `py -m pruebas`. Si se agrega algo, agregar su prueba
+  en el `pruebas/test_*.py` de su tema (`unittest`): una clase `Prueba` de
+  `pruebas/comun.py`, con `self.comprobar("qué se comprueba", condición)`, y `@lenta`
+  si tarda más de unos segundos.
 - Cambios chicos y de a uno. Antes de tocar varios archivos, proponer un plan.
 - No se puede probar acá: I2C, GPIO, systemd, NetworkManager, Chromium kiosco.
   Eso se prueba en la Pi con `python3 -m h08 diagnostico` y las pruebas guiadas; cuando el

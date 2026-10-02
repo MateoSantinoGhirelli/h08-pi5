@@ -18,7 +18,7 @@ alfanumérico, que darían códigos un poco más chicos.
 
 CÓMO SE COMPRUEBA
 ---------------------------------------------------------------------------
-La prueba pruebas/prueba_qr.py genera códigos de todas las versiones y los
+La prueba pruebas/test_qr.py genera códigos de todas las versiones y los
 decodifica con OpenCV, que es un lector independiente: si un código no se
 puede leer, la prueba falla.
 """

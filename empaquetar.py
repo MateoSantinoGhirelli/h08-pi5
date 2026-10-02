@@ -70,10 +70,9 @@ def leer(ruta, rel):
 
 
 def pruebas():
-    print("Corriendo las pruebas antes de empaquetar (1 minuto)...")
+    print("Corriendo las pruebas antes de empaquetar (un par de minutos)...")
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
-    r = subprocess.run([sys.executable, os.path.join(AQUI, "pruebas", "correr_pruebas.py")],
-                       env=env)
+    r = subprocess.run([sys.executable, "-m", "pruebas"], env=env, cwd=AQUI)
     return r.returncode == 0
 
 
