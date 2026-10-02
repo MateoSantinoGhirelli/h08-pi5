@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 - programa principal del tablero en la Raspberry Pi 5
-====================================================================
+"""El programa del tablero: lo que arranca el servicio en la Raspberry Pi 5.
 
     python3 -m h08                     tablero completo: servos, luces, el paso
                                        a paso de la brújula y la página web
@@ -17,14 +15,10 @@ python3 -m h08 - programa principal del tablero en la Raspberry Pi 5
     python3 -m h08 --renovar-clave     invalida el QR de administrador
     python3 -m h08 SUBCOMANDO ...      herramientas de prueba y ajuste (ver --help)
 
-Arranca tres hilos: la simulación a 20 Hz (simulacion/hilo.py), el motor paso a
-paso de la brújula (hardware/paso_a_paso.py) y el servidor web en el puerto
-8000. Lo arranca solo el servicio tablero-h08 al encender (ver
-deploy/instalar.sh); la pantalla de la Raspberry lo muestra con deploy/kiosco.sh.
-
-Al recibir Ctrl+C o la orden de parada del servicio (SIGTERM o SIGINT) se
-apaga en orden: luces apagadas, servos sin pulso, la aguja de la brújula a su
-cero y posición guardada.
+Arranca tres hilos: la simulación a 20 Hz, el motor de la brújula y el servidor web
+en el puerto 8000. Con Ctrl+C o con la orden de parada del servicio (SIGTERM) se
+apaga en orden: luces apagadas, servos sin pulso y la aguja de la brújula en su cero,
+con la posición guardada.
 """
 
 import argparse
@@ -94,12 +88,9 @@ def construir_actuadores(simulado, con_motores):
     return actuadores
 
 
-# ===========================================================================
-# QR del administrador
-# ===========================================================================
-# No se sirve por la web a propósito: una página que muestra la llave es una
-# página a la que se le puede pedir la llave. Sale por la terminal de la
-# Raspberry o en una hoja impresa.
+# El QR del administrador no se sirve por la web a propósito: una página que muestra
+# la llave es una página a la que se le puede pedir la llave. Sale por la terminal de
+# la Raspberry o en una hoja impresa.
 def url_admin(puerto, clave):
     return servidor_web.direccion(puerto).rstrip("/") + "/mando?k=" + clave
 
@@ -187,7 +178,6 @@ def ayuda_subcomandos():
     return "\n".join(lineas)
 
 
-# ===========================================================================
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     # En una consola de Windows los caracteres del QR no entran en su
@@ -252,6 +242,17 @@ def tablero(argv):
     log.info("tablero didáctico %s, %s", AERONAVE["modelo"], version())
     log.info("matrícula %s, %s", AERONAVE["matricula"], AERONAVE["serie"])
 
+    # El puerto se toma antes que las placas: si ya hay un tablero andando (el
+    # servicio), abrirlas dejaría sus servos sin pulso antes de fallar acá.
+    try:
+        servidor = servidor_web.crear(None, args.puerto, rutas.ESTATICOS,
+                                      donde="la Raspberry",
+                                      acceso=None if args.sin_clave else acceso)
+    except OSError as e:
+        log.error("el puerto %d está ocupado (%s): ¿ya hay un tablero andando?", args.puerto, e)
+        log.error("si es el servicio:  sudo systemctl stop tablero-h08   (o usar --puerto)")
+        return 1
+
     actuadores = construir_actuadores(args.simulado, not args.sin_motores)
 
     log.info("salida: %s", actuadores.descripcion())
@@ -264,11 +265,9 @@ def tablero(argv):
                  MOTOR_CFG["pasos_por_vuelta"], MOTOR_CFG["vel_max_pps"])
 
     nucleo = HiloSimulacion(actuadores, semilla=args.semilla)
+    servidor.RequestHandlerClass.nucleo = nucleo    # no atiende hasta serve_forever
     nucleo.start()
 
-    servidor = servidor_web.crear(nucleo, args.puerto, rutas.ESTATICOS,
-                                  donde="la Raspberry",
-                                  acceso=None if args.sin_clave else acceso)
     log.info("página en %s", servidor_web.direccion(args.puerto))
     if args.sin_clave:
         log.warning("--sin-clave: cualquiera que abra la página puede operar")

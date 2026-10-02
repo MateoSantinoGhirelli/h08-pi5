@@ -1,31 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-qr.py - generador de códigos QR sin bibliotecas externas
-=========================================================
+"""Códigos QR con la biblioteca estándar, porque en la Pi no se instala nada con pip.
 
-POR QUÉ ESTÁ ESCRITO EN EL PROYECTO
----------------------------------------------------------------------------
-El tablero tiene que arrancar en una Raspberry sin internet, así que no
-depende de instalar paquetes con pip. Este módulo genera el QR de la
-dirección de la página y el del administrador con la biblioteca estándar.
-
-QUÉ HACE
----------------------------------------------------------------------------
-Codifica texto en modo byte, corrección de errores nivel M, versiones 1 a
-10: hasta 213 caracteres, de sobra para una dirección como
-http://10.55.0.1:8000/mando?k=... . No implementa los modos numérico ni
-alfanumérico, que darían códigos un poco más chicos.
-
-CÓMO SE COMPRUEBA
----------------------------------------------------------------------------
-La prueba pruebas/test_qr.py genera códigos de todas las versiones y los
-decodifica con OpenCV, que es un lector independiente: si un código no se
-puede leer, la prueba falla.
+Modo byte, corrección nivel M, versiones 1 a 10: hasta 213 caracteres, de sobra para
+una dirección como http://10.55.0.1:8000/mando?k=... No están los modos numérico ni
+alfanumérico, que darían códigos un poco más chicos. pruebas/test_qr.py los
+decodifica con OpenCV, un lector independiente: lo que no se lee, falla.
 """
 
-# ===========================================================================
-# Aritmética en GF(256), el campo del algoritmo de Reed-Solomon
-# ===========================================================================
 _EXP = [0] * 512
 _LOG = [0] * 256
 _x = 1
@@ -50,14 +31,14 @@ def _poli_generador(grado):
     g = [1]
     for i in range(grado):
         # g queda con el coeficiente de mayor grado PRIMERO. Multiplicar por
-        # (x + a) es: el termino x corre cada coeficiente un lugar hacia el
-        # grado alto -o sea que se queda en el mismo indice al crecer la
-        # lista- y el termino a lo baja un grado, que es el indice siguiente.
+        # (x + a) es: el término x corre cada coeficiente un lugar hacia el
+        # grado alto -o sea que se queda en el mismo índice al crecer la
+        # lista- y el término a lo baja un grado, que es el índice siguiente.
         #
-        # Estas dos lineas estaban al reves y el polinomio salia espejado.
-        # El QR se dibujaba perfecto y no lo leia ningun telefono: los
-        # patrones eran correctos y lo unico malo eran los bytes de
-        # correccion de error. De ahi que la prueba DECODIFIQUE de verdad en
+        # Estas dos líneas estaban al revés y el polinomio salía espejado.
+        # El QR se dibujaba perfecto y no lo leía ningún teléfono: los
+        # patrones eran correctos y lo único malo eran los bytes de
+        # corrección de error. De ahí que la prueba DECODIFIQUE de verdad en
         # vez de mirar el dibujo.
         nuevo = [0] * (len(g) + 1)
         for j, c in enumerate(g):
@@ -68,7 +49,7 @@ def _poli_generador(grado):
 
 
 def _correccion(datos, n_ec):
-    """Los n_ec bytes de correccion de error de un bloque."""
+    """Los n_ec bytes de corrección de error de un bloque."""
     g = _poli_generador(n_ec)
     resto = list(datos) + [0] * n_ec
     for i in range(len(datos)):
@@ -79,10 +60,8 @@ def _correccion(datos, n_ec):
     return resto[len(datos):]
 
 
-# ===========================================================================
-# Tablas del estandar, para correccion M
-# ===========================================================================
-# version: (bytes de datos totales, bytes de correccion por bloque,
+# Tablas del estándar, para corrección M
+# versión: (bytes de datos totales, bytes de corrección por bloque,
 #           bloques del grupo 1, bytes de datos por bloque del grupo 1,
 #           bloques del grupo 2, bytes de datos por bloque del grupo 2)
 _TABLA_M = {
@@ -98,14 +77,14 @@ _TABLA_M = {
     10: (216, 26, 4, 43, 1, 44),
 }
 
-# centros de los patrones de alineacion, por version
+# centros de los patrones de alineación, por versión
 _ALINEACION = {
     1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30],
     6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46],
     10: [6, 28, 50],
 }
 
-# 0b01 = nivel M, ya con su codigo BCH; indexado por mascara
+# 0b01 = nivel M, ya con su código BCH; indexado por máscara
 _FORMATO_M = [
     0x5412, 0x5125, 0x5E7C, 0x5B4B, 0x45F9, 0x40CE, 0x4F97, 0x4AA0,
 ]
@@ -121,13 +100,12 @@ def _version_para(n_bytes):
     for v in range(1, 11):
         if _TABLA_M[v][0] * 8 >= 4 + _bits_cuenta(v) + n_bytes * 8:
             return v
-    raise ValueError("el texto no entra en un QR version 10 "
-                     "(el maximo son 213 caracteres)")
+    raise ValueError("el texto no entra en un QR versión 10 "
+                     "(el máximo son 213 caracteres)")
 
 
-# ===========================================================================
 def _bits_de(texto, version):
-    """Modo byte -> lista de bits, con relleno hasta llenar la version."""
+    """Modo byte -> lista de bits, con relleno hasta llenar la versión."""
     datos = texto.encode("utf-8")
     cap = _TABLA_M[version][0]
     bits = [0, 1, 0, 0]                                  # modo byte
@@ -153,7 +131,7 @@ def _bits_de(texto, version):
 
 
 def _bytes_finales(texto, version):
-    """Datos + correccion, ya intercalados como manda el estandar."""
+    """Datos + corrección, ya intercalados como manda el estándar."""
     bits = _bits_de(texto, version)
     crudos = [int("".join(str(b) for b in bits[i:i + 8]), 2)
               for i in range(0, len(bits), 8)]
@@ -177,9 +155,8 @@ def _bytes_finales(texto, version):
     return salida
 
 
-# ===========================================================================
 def _armar(version):
-    """Matriz vacia con los patrones fijos y las casillas reservadas."""
+    """Matriz vacía con los patrones fijos y las casillas reservadas."""
     n = version * 4 + 17
     m = [[None] * n for _ in range(n)]
 
@@ -213,7 +190,6 @@ def _armar(version):
     m[n - 8][8] = 1                                      # modulo oscuro fijo
 
     # INFORMACIÓN DE VERSIÓN, desde la versión 7
-    # -----------------------------------------------------------------------
     # Son 18 bits repetidos en dos bloques de 6x3, junto al patrón de
     # búsqueda de arriba a la derecha y al de abajo a la izquierda. Para las
     # versiones 1 a 6 no existen: el lector deduce la versión del tamaño.
@@ -235,11 +211,11 @@ def _armar(version):
 
 
 def _bits_version(version):
-    """Los 18 bits: 6 de version mas 12 de correccion BCH (generador 0x1F25)."""
+    """Los 18 bits: 6 de versión más 12 de corrección BCH (generador 0x1F25)."""
     resto = version << 12
-    # division polinomica en GF(2): mientras el resto tenga grado 12 o mas,
+    # división polinómica en GF(2): mientras el resto tenga grado 12 o más,
     # se le resta -o sea, se le hace XOR- el generador corrido para que sus
-    # bits mas altos coincidan.
+    # bits más altos coincidan.
     while resto.bit_length() >= 13:
         resto ^= 0x1F25 << (resto.bit_length() - 13)
     return (version << 12) | resto
@@ -268,7 +244,7 @@ def _mascara(k, x, y):
 
 def _penalidad(m, n):
     p = 0
-    # 1: cinco o mas del mismo color seguidos
+    # 1: cinco o más del mismo color seguidos
     for linea in list(m) + [list(c) for c in zip(*m)]:
         run, ant = 1, linea[0]
         for v in linea[1:]:
@@ -283,7 +259,7 @@ def _penalidad(m, n):
         for x in range(n - 1):
             if m[y][x] == m[y][x+1] == m[y+1][x] == m[y+1][x+1]:
                 p += 3
-    # 3: el patron 1011101 con cuatro claros de un lado
+    # 3: el patrón 1011101 con cuatro claros de un lado
     pat1 = [1,0,1,1,1,0,1,0,0,0,0]
     pat2 = [0,0,0,0,1,0,1,1,1,0,1]
     for linea in list(m) + [list(c) for c in zip(*m)]:
@@ -319,7 +295,7 @@ def matriz(texto):
     col = n - 1
     arriba = True
     while col > 0:
-        if col == 6:                    # la columna del patron de tiempo se saltea
+        if col == 6:                    # la columna del patrón de tiempo se saltea
             col -= 1
         filas = range(n - 1, -1, -1) if arriba else range(n)
         for y in filas:
@@ -330,7 +306,7 @@ def matriz(texto):
         arriba = not arriba
         col -= 2
 
-    # se prueban las ocho mascaras y se elige la de menor penalidad
+    # se prueban las ocho máscaras y se elige la de menor penalidad
     mejor, mejor_p = None, None
     for k in range(8):
         m = [fila[:] for fila in lleno]
@@ -362,15 +338,12 @@ def _poner_formato(m, n, k):
     m[n - 8][8] = 1
 
 
-# ===========================================================================
-# Salidas
-# ===========================================================================
 def texto_consola(dato, borde=2):
     """El QR dibujado con bloques, para leerlo de la pantalla de la terminal.
 
-    Cada modulo son DOS caracteres de ancho: en una terminal los caracteres
-    son mas altos que anchos y un QR de un caracter por modulo sale aplastado
-    y no lo lee ningun telefono.
+    Cada módulo son DOS caracteres de ancho: en una terminal los caracteres
+    son más altos que anchos y un QR de un carácter por módulo sale aplastado
+    y no lo lee ningún teléfono.
     """
     m = matriz(dato)
     n = len(m)
@@ -390,7 +363,7 @@ def texto_consola(dato, borde=2):
 
 
 def svg(dato, lado_px=320, borde=2):
-    """El QR como SVG, para la pagina web. Sin archivos ni imagenes."""
+    """El QR como SVG, para la página web. Sin archivos ni imágenes."""
     m = matriz(dato)
     n = len(m)
     total = n + 2 * borde

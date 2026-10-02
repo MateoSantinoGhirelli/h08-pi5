@@ -1,46 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-h08/hardware/pca9685.py - servos y luces sobre dos PCA9685 por I2C
-================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Servos y luces sobre dos PCA9685, por el /dev/i2c-1 del kernel (os + fcntl).
 
-EL CHIP
----------------------------------------------------------------------------
-El PCA9685 genera 16 salidas PWM de 12 bits (4096 cuentas por período) con
-una base de tiempo común. La frecuencia se fija con el PRESCALER:
-
-        prescale = round(25 MHz / (4096 · f)) - 1        (121 para 50 Hz)
-
-A 50 Hz el período es de 20 ms y cada cuenta vale 4,88 us. Un servo usa
-pulsos de 500 a 2500 us, o sea de 102 a 512 cuentas: unos 410 pasos para
-180 grados, 0,44 grados por paso.
-
-Cada canal ocupa cuatro registros seguidos (ON_L, ON_H, OFF_L, OFF_H). Con
-el AUTOINCREMENTO de MODE1 activado se escriben varios canales seguidos en
-una sola transacción. Dos bits especiales fijan la salida sin PWM:
-
-        bit 4 de ON_H  ->  salida siempre en ALTO  ("full ON")
-        bit 4 de OFF_H ->  salida siempre en BAJO  ("full OFF", tiene prioridad)
-
-Se usan para las luces, que son todo o nada, y para soltar los servos (sin
-pulso el servo no hace fuerza ni zumba).
-
-EL BUS
----------------------------------------------------------------------------
-Se habla con el dispositivo /dev/i2c-1 del kernel usando sólo la biblioteca
-estándar (os + fcntl): no hace falta instalar nada. Cada escritura es una
-transacción: dirección del registro seguida de los datos.
-
-CUIDADOS
----------------------------------------------------------------------------
-  * Luces invertidas: ver LUCES_ACTIVAS_EN_BAJO en h08/config/hardware.py.
-  * Si el PCA9685 se reinicia (una caída de tensión fuerte), vuelve dormido,
-    sin autoincremento y con todas las salidas en bajo. Cada dos segundos se
-    lee MODE1; si el chip se reinició, se lo vuelve a configurar y se le
-    reenvían todos los canales.
-  * Un error de bus no detiene el tablero: se cuenta, y los canales que no se
-    pudieron escribir se reintentan en el ciclo siguiente.
+Los servos van a 50 Hz con pulsos de 500 a 2500 us; las luces y los servos sueltos
+usan los bits de salida fija del chip. Una placa que se reinicia por baja tensión se
+detecta y se reconfigura sola, y un error de bus no detiene el tablero: se reintenta
+en el ciclo siguiente. El chip y estos cuidados, en docs/hardware.md.
 """
 
 try:
@@ -59,7 +23,7 @@ from h08.hardware.base import ActuadoresBase
 
 log = logging.getLogger(__name__)
 
-# --- Registros y bits del PCA9685 -----------------------------------------
+# registros y bits del PCA9685
 MODE1 = 0x00
 MODE2 = 0x01
 LED0_ON_L = 0x06
@@ -72,16 +36,13 @@ M2_OUTDRV = 0x04        # salida totem-pole: obligatoria para los servos
 
 OSCILADOR_HZ = 25000000.0
 
-# Cuatro bytes de canal (ON_L, ON_H, OFF_L, OFF_H) para los estados fijos
+# los cuatro bytes de un canal (ON_L, ON_H, OFF_L, OFF_H) para los estados fijos
 SALIDA_ALTA = (0x00, 0x10, 0x00, 0x00)     # full ON
 SALIDA_BAJA = (0x00, 0x00, 0x00, 0x10)     # full OFF
 
 I2C_SLAVE = 0x0703      # ioctl de linux/i2c-dev.h: elegir el esclavo
 
 
-# ===========================================================================
-# Bus I2C del kernel
-# ===========================================================================
 class BusI2C:
     """Acceso a /dev/i2c-N con la biblioteca estándar."""
 
@@ -131,9 +92,6 @@ class BusI2C:
             pass
 
 
-# ===========================================================================
-# Una placa PCA9685
-# ===========================================================================
 class PCA9685:
     """Una placa: 16 canales con memoria sombra de lo escrito."""
 
@@ -187,15 +145,11 @@ def bytes_pulso(cuentas):
     return (0x00, 0x00, c & 0xFF, c >> 8)
 
 
-# ===========================================================================
-# Servos y luces del tablero
-# ===========================================================================
 class ActuadoresPCA9685(ActuadoresBase):
-    """
-    destino = (nombre_de_placa, canal), por ejemplo ("PCA0", 7).
+    """Los destinos son (placa, canal), por ejemplo ("PCA0", 7).
 
-    Los instrumentos de motor paso a paso no pasan por el PCA9685: si se le
-    entrega un gestor de motores (paso_a_paso.py), se le derivan a él.
+    Lo de giro continuo no pasa por el PCA9685: si se le entrega un gestor de
+    motores (paso_a_paso.py), se le deriva.
     """
 
     CADA_VIGILANCIA_S = 2.0
@@ -240,15 +194,13 @@ class ActuadoresPCA9685(ActuadoresBase):
                     placa.poner(c, self._bytes_luz(False))
             placa.volcar()
 
-    # -- conversión ---------------------------------------------------------
     def limites_us(self, destino):
         """Pulsos para 0 y para 180 grados del programa en ese canal.
 
-        La calibración guarda lo medido con el transportador: el pulso que
-        deja el brazo en la marca de 0° (izquierda) y en la de 180° (derecha),
-        mirando el servo desde el lado del eje. Si entre el servo y la aguja
-        hay un par de engranajes, el sentido se invierte (ver
-        h08.config.invertido) y los dos extremos se intercambian.
+        La calibración guarda lo medido con el transportador, mirando el servo desde
+        el lado del eje: el pulso que deja el brazo en 0° (izquierda) y en 180°
+        (derecha). Con un par de engranajes de por medio el giro se invierte, así que
+        los dos extremos se intercambian.
         """
         c = self.cal.get("%s:%d" % tuple(destino))
         if c is None:
@@ -273,7 +225,6 @@ class ActuadoresPCA9685(ActuadoresBase):
             return SALIDA_BAJA if encendida else SALIDA_ALTA
         return SALIDA_ALTA if encendida else SALIDA_BAJA
 
-    # -- salidas ------------------------------------------------------------
     def escribir_servo(self, destino, angulo_deg):
         placa = self.placas.get(destino[0])
         if placa is None:
@@ -287,7 +238,7 @@ class ActuadoresPCA9685(ActuadoresBase):
         placa.poner(destino[1], bytes_pulso(self._cuentas(placa, us)))
 
     def escribir_pulso(self, destino, us):
-        """Pulso en microsegundos, sin calibración. Lo usa calibrar_servo.py."""
+        """Pulso en microsegundos, sin calibración: lo usa el subcomando calibrar."""
         placa = self.placas.get(destino[0])
         if placa is not None:
             placa.poner(destino[1], bytes_pulso(self._cuentas(placa, us)))
@@ -307,7 +258,6 @@ class ActuadoresPCA9685(ActuadoresBase):
         if self.motores is not None:
             self.motores.escribir_motor(destino, angulo_deg)
 
-    # -- ciclo --------------------------------------------------------------
     def refrescar(self):
         ahora = time.monotonic()
         vigilar = ahora - self._t_vigilancia >= self.CADA_VIGILANCIA_S
@@ -323,8 +273,7 @@ class ActuadoresPCA9685(ActuadoresBase):
                     placa.configurar()
                 n += placa.volcar()
             except OSError as e:
-                # Lo que no se pudo mandar sigue marcado como sucio y se
-                # reintenta en el próximo ciclo.
+                # lo que no se pudo mandar sigue sucio y se reintenta en el ciclo siguiente
                 self.errores += 1
                 self.ultimo_error = "%s: %s" % (nombre, e)
                 if self._t_aviso_bus is None or ahora - self._t_aviso_bus >= self.CADA_AVISO_BUS_S:
@@ -369,17 +318,12 @@ class ActuadoresPCA9685(ActuadoresBase):
                 "faltan": self.faltantes}
 
 
-# ===========================================================================
-# Calibración por servo
-# ===========================================================================
 def cargar_calibracion(archivo):
-    """Lee calibracion_servos.json (lo escribe calibrar_servo.py).
+    """Lee datos/calibracion_servos.json y devuelve {"PCA0:3": (us_0, us_180, topes...)}.
 
-    Devuelve {"PCA0:3": (us_0, us_180, tope_a, tope_b), ...}:
-      us_0, us_180    pulso con el brazo en 0° y en 180° del transportador;
-                      pueden estar extrapolados si el servo no llega;
-      tope_a, tope_b  los pulsos que no se pasan (los extremos alcanzables).
-    También acepta el formato viejo {"min_us": .., "max_us": ..}.
+    us_0 y us_180 son los pulsos medidos con el transportador, que pueden estar
+    extrapolados si el servo no llega; tope_a y tope_b, los extremos que sí alcanza y
+    que no se pasan. También acepta el formato viejo {"min_us": .., "max_us": ..}.
     """
     if not archivo or not os.path.exists(archivo):
         return {}

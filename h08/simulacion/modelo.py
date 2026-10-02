@@ -1,45 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
-h08/simulacion/modelo.py - modelo físico del H-19A y piloto virtual
-===========================================================
+"""La física del H-19A y el piloto virtual que lo vuela.
 
-FILOSOFÍA DEL MODELO
---------------------------------------------------------------------------
-No se simula un helicóptero completo de 6 grados de libertad: sería costoso
-en CPU, difícil de calibrar e innecesario para mover agujas.
-
-Se usa un modelo CUASI-ESTÁTICO CON RETARDOS, que es como razona un técnico:
-
-    "Si el piloto sube el mando de paso colectivo, la potencia requerida sube; el motor
-     responde subiendo la presión de admisión; si la potencia entregada no
-     alcanza, el régimen del rotor cae; la temperatura de culata sube despacio
-     porque tiene mucha masa térmica..."
-
-Cada magnitud tiene un OBJETIVO calculado algebraicamente y lo persigue con
-una constante de tiempo propia. El resultado es físicamente coherente,
-determinista, estable con cualquier paso de tiempo y explicable renglón por
-renglón.
-
-LA ÚNICA ECUACIÓN DIFERENCIAL DE VERDAD
---------------------------------------------------------------------------
-La excepción es la inercia del rotor principal, que SI se integra:
-
-        d(Omega)/dt = (P_disponible - P_requerida) / (I * Omega)
-
-Esta ecuación produce, sin agregar nada, los fenómenos didácticos más
-importantes:
-  * las RPM caen si se pide más potencia de la que hay
-  * en autorrotación, bajar el mando de paso colectivo hace SUBIR el régimen del rotor
-  * el "needle split" del tacómetro doble al desacoplar la rueda libre
-  * el aterrizaje en autorrotación agotando la energía cinética del rotor
+Modelo cuasi-estático con retardos: cada magnitud tiene un objetivo algebraico y lo
+persigue con su constante de tiempo, como razona un técnico. La única ecuación
+diferencial de verdad es la inercia del rotor, y de ella salen solos la caída de RPM,
+la autorrotación y el needle split del tacómetro doble. Por qué está hecho así:
+docs/modelo_vuelo.md.
 """
 
 from h08.util import limitar, aproximar, mezclar, rampa
 from h08.config import LIM
 
-# ---------------------------------------------------------------------------
 # Posiciones del selector de magnetos
-# ---------------------------------------------------------------------------
 MAG_OFF = 0
 MAG_L = 1
 MAG_R = 2
@@ -57,7 +29,7 @@ class Controles:
     def __init__(self):
         self.colectivo = 0.0        # 0..1
         self.throttle = 0.0         # 0..1 (correlado al colectivo en vuelo)
-        self.ciclico_lon = 0.0      # -1..1 (adelante = negativo = picar)
+        self.ciclico_lon = 0.0      # -1..1 (positivo = cíclico adelante = picar y acelerar)
         self.ciclico_lat = 0.0      # -1..1
         self.pedal = 0.0            # -1..1
         self.calefaccion_carb = 0.0  # 0..1
@@ -113,7 +85,7 @@ class SaludSistemas:
 class ModeloVuelo:
     """Estado físico completo de la aeronave."""
 
-    # -- constantes de sintonía del modelo (agrupadas para poder ajustarlas) --
+    # Constantes de sintonía del modelo (agrupadas para poder ajustarlas)
     K_INERCIA_ROTOR = 850.0     # rigidez de la ecuación del rotor
     K_VERT = 900.0              # ft/min de aceleración vertical por unidad de empuje
     TAU_IAS = 6.0               # inercia longitudinal del helicóptero
@@ -130,19 +102,18 @@ class ModeloVuelo:
         self.salud = SaludSistemas()
         self.reiniciar()
 
-    # =======================================================================
     def reiniciar(self, en_frio=True):
         self.t = 0.0
         self.salud.reiniciar()
 
-        # --- Ambiente ---
+        # Ambiente
         # Temperatura de aire exterior: es el piso del que salen todas las
         # demás temperaturas (aceite, culata, carburador y transmisión).
         self.oat_c = LIM["oat_c"]
         self.qnh_hpa = LIM["qnh_hpa"]
         self.humedad = 0.45          # 0..1 - alimenta el riesgo de engelamiento
 
-        # --- Grupo motopropulsor ---
+        # Grupo motopropulsor
         self.n_eng_rpm = 0.0
         self.n_rot_rpm = 0.0
         self.map_inhg = LIM["map_ambiente"]
@@ -150,7 +121,7 @@ class ModeloVuelo:
         self.pot_entregada = 0.0     # 0..1.2  potencia del motor
         self.acoplado = False        # rueda libre transmitiendo motor -> rotor
 
-        # --- Fluidos ---
+        # Fluidos
         self.oil_p_psi = 0.0
         self.oil_t_c = self.oat_c
         self.cht_c = self.oat_c
@@ -161,13 +132,13 @@ class ModeloVuelo:
         self.flujo_lph = 0.0
         self.hielo_carb = 0.0        # 0..1 acumulación de hielo
 
-        # --- Transmisión ---
+        # Transmisión
         self.xmsn_p_psi = 0.0
         self.xmsn_t_c = self.oat_c
 
-        # --- Giróscopos ---
+        # Giróscopos
         # En el H-19 el horizonte artificial y el indicador de rumbo son
-        # ELECTRICOS: los alimenta el inversor desde la barra de 24 V. Un
+        # ELÉCTRICOS: los alimenta el inversor desde la barra de 24 V. Un
         # giróscopo no arranca ni se detiene instantáneamente.
         #   giro = 0  rotor detenido, el instrumento no indica nada útil
         #   giro = 1  rotor a régimen, el instrumento indica bien
@@ -187,7 +158,7 @@ class ModeloVuelo:
         # altura. En vuelo nivelado la falla es INVISIBLE.
         self.alt_estatica_ft = None
 
-        # --- Eléctrico ---
+        # Eléctrico
         self.bus_v = 0.0
         self.amp_a = 0.0
         self.bateria_ah_max = 34.0   # capacidad típica de batería de plomo 24 V
@@ -197,7 +168,7 @@ class ModeloVuelo:
         self.arranque_activo = False
         self.empuje = 0.0
 
-        # --- Vuelo ---
+        # Vuelo
         self.alt_ft = 0.0
         self.alt_terreno_ft = 0.0
         self.ias_kt = 0.0
@@ -256,9 +227,7 @@ class ModeloVuelo:
         self.alt_estatica_ft = None
         self.en_tierra = False
 
-    # =======================================================================
-    # PASO DE SIMULACIÓN
-    # =======================================================================
+    # Paso de simulación
     def paso(self, dt):
         self.t += dt
         self._paso_aire(dt)
@@ -270,9 +239,7 @@ class ModeloVuelo:
         self._paso_combustible(dt)
         self._paso_vuelo(dt)
 
-    # -----------------------------------------------------------------------
-    # 0. EL AIRE DE AFUERA
-    # -----------------------------------------------------------------------
+    # 0. El aire de afuera
     def _paso_aire(self, dt):
         """La temperatura exterior baja con la altura.
 
@@ -284,9 +251,7 @@ class ModeloVuelo:
         del dt
         self.oat_c = LIM["oat_c"] - 1.98 * (self.alt_ft / 1000.0)
 
-    # -----------------------------------------------------------------------
-    # 1. SISTEMA ELÉCTRICO
-    # -----------------------------------------------------------------------
+    # 1. Sistema eléctrico
     def _paso_electrico(self, dt):
         s = self.salud
         if not self.ctl.bateria:
@@ -295,7 +260,7 @@ class ModeloVuelo:
             self.gen_en_linea = False
             return
 
-        # El generador entra en línea recien con el motor girando con fuerza
+        # El generador entra en línea recién con el motor girando con fuerza
         quiere_gen = (self.ctl.generador and s.generador > 0.25
                       and self.n_eng_rpm > 1200.0)
         self.gen_en_linea = quiere_gen
@@ -386,10 +351,8 @@ class ModeloVuelo:
             self.deriva_att_deg += (1.0 - self.giro_att) * 1.9 * dt
             self.deriva_att_deg = limitar(self.deriva_att_deg, -30.0, 30.0)
 
-    # --- Indicaciones giroscópicas: lo que MUESTRA el instrumento -----------
-    # No es la actitud real de la aeronave: es la actitud real filtrada por el
-    # estado del giróscopo. Con el giro cayendo, el horizonte se va quedando
-    # atrás y termina mostrando una actitud que ya no existe.
+    # Actitud indicada = real × régimen del giróscopo + su deriva. Con el giro
+    # cayendo, la indicación se achica y se corre: muestra una actitud que no existe.
     @property
     def pitch_ind_deg(self):
         return self.pitch_deg * self.giro_att + 0.55 * self.deriva_att_deg
@@ -402,7 +365,7 @@ class ModeloVuelo:
     def hdg_giro_deg(self):
         return (self.hdg_deg + self.deriva_dg_deg) % 360.0
 
-    # --- Velocidad INDICADA: el sistema pitot-estática ----------------------
+    # Velocidad INDICADA: el sistema pitot-estática
     # El velocímetro no mide velocidad: mide la DIFERENCIA entre la presión
     # de impacto del tubo pitot y la presión estática. Si la toma estática se
     # tapa, adentro del instrumento queda encerrada la presión que había en el
@@ -430,14 +393,12 @@ class ModeloVuelo:
     def energia_ok(self):
         return self.bus_v >= LIM["bus_min_util"]
 
-    # -----------------------------------------------------------------------
-    # 2. MOTOR RADIAL R-1340-57
-    # -----------------------------------------------------------------------
+    # 2. Motor radial R-1340-57
     def _paso_motor(self, dt):
         s = self.salud
         ctl = self.ctl
 
-        # --- Magnetos --------------------------------------------------------
+        # Magnetos
         # El R-1340 tiene doble encendido: dos bujías por cilindro, cada una
         # alimentada por un magneto distinto. Con las dos, el frente de llama
         # sale de dos puntos y la combustión termina rápido. Con una sola el
@@ -464,7 +425,7 @@ class ModeloVuelo:
         # combustión termina más tarde y la cabeza del cilindro se calienta.
         self.n_magnetos = n_mag
 
-        # --- Combustible disponible en la toma ---------------------------
+        # Combustible disponible en la toma
         hay_combustible = self._combustible_disponible() > 0.5
         presion_ok = self.fuel_p_psi > 4.0 or self.n_eng_rpm < 300.0
 
@@ -481,11 +442,11 @@ class ModeloVuelo:
         else:
             factor_fuel = 1.0
 
-        # --- Hielo de carburador -----------------------------------------
+        # Hielo de carburador
         self._paso_hielo_carburador(dt)
         factor_carb = s.carburador * (1.0 - 0.85 * self.hielo_carb)
 
-        # --- Presión de admisión ------------------------------------------
+        # Presión de admisión
         # El manómetro de admisión es ABSOLUTO. Con el motor parado marca la
         # presión barométrica del campo, unas 29,9 inHg. Al arrancar, la
         # aguja BAJA hasta unas 13 inHg, porque la mariposa cerrada genera
@@ -509,7 +470,7 @@ class ModeloVuelo:
             map_obj = limitar(map_obj, LIM["map_min"], LIM["map_max"])
         self.map_inhg = aproximar(self.map_inhg, map_obj, dt, 0.25)
 
-        # --- Potencia disponible ------------------------------------------
+        # Potencia disponible
         # Normalizada: 1.0 = potencia continua máxima (550 HP)
         rel_map = limitar((self.map_inhg - LIM["map_ralenti"]) /
                           (LIM["map_despegue"] - LIM["map_ralenti"]), 0.0, 1.2)
@@ -541,7 +502,7 @@ class ModeloVuelo:
         else:
             self.pot_entregada = 0.0
 
-        # --- Carga total sobre el ciguenal -----------------------------------
+        # Carga total sobre el cigüeñal
         #   * el rotor, SOLO si el embrague está acoplado
         #   * accesorios (generador, bombas, magnetos)
         #   * fricción y bombeo, que crecen con el cuadrado de las RPM
@@ -550,7 +511,7 @@ class ModeloVuelo:
         carga = (self.pot_requerida if self.acoplado else 0.04)
         carga += 0.04 + 0.14 * (self.n_eng_rpm / 2200.0) ** 2
 
-        # --- Aporte del arrancador -------------------------------------------
+        # Aporte del arrancador
         # Se desacopla solo por encima de 900 RPM (embrague de rueda libre del
         # arrancador). Mientras está engranado suma par al balance.
         # El arrancador sigue girando con la barra muy caída: es justamente lo
@@ -568,7 +529,7 @@ class ModeloVuelo:
         else:
             p_arrancador = 0.0
 
-        # --- RPM del motor: BALANCE DE PAR -----------------------------------
+        # RPM del motor: BALANCE DE PAR
         # Si sobra potencia el motor acelera, si falta se frena. No hay ninguna
         # tabla "mariposa -> RPM": las RPM SALEN del balance. Por eso la presión
         # de admisión en crucero termina siendo la que corresponde a la potencia
@@ -627,19 +588,17 @@ class ModeloVuelo:
             k = 0.12 if self.ctl.calefaccion_carb > 0.5 else 0.012
             self.hielo_carb = limitar(self.hielo_carb - k * dt, 0.0, 1.0)
 
-    # -----------------------------------------------------------------------
-    # 3. ROTOR PRINCIPAL  (la única integración diferencial del modelo)
-    # -----------------------------------------------------------------------
+    # 3. Rotor principal (la única integración diferencial del modelo)
     def _paso_rotor(self, dt):
         ctl = self.ctl
         s = self.salud
 
-        # --- Potencia requerida por el rotor -------------------------------
+        # Potencia requerida por el rotor
         # Curva en U, la firma inconfundible de un helicóptero:
         #   * potencia INDUCIDA: enorme en estacionario, cae al ganar
         #     velocidad de traslación (el rotor "encuentra aire fresco")
         #   * potencia de PERFIL: casi constante, es el arrastre de las palas
-        #   * potencia PARASITA: crece con el cubo de la velocidad
+        #   * potencia PARÁSITA: crece con el cubo de la velocidad
         # El mínimo está alrededor de 45-55 kt: por eso esa es la velocidad
         # de máxima autonomía y la de mejor planeo en autorrotación.
         v = self.ias_kt
@@ -660,7 +619,7 @@ class ModeloVuelo:
         req *= mezclar(0.30, 1.0, rel_rot * rel_rot)
         self.pot_requerida = limitar(req, 0.0, 1.6)
 
-        # --- Rueda libre / embrague ---------------------------------------
+        # Rueda libre / embrague
         # El rotor NUNCA arrastra al motor: si el rotor gira más rápido que
         # el motor dividido 10, la rueda libre desacopla. Esa es la
         # autorrotación, y es lo que produce el "needle split".
@@ -675,7 +634,7 @@ class ModeloVuelo:
                              and self.motor_vivo
                              and n_rot_motor >= self.n_rot_rpm - margen)
 
-        # --- Potencia entrante al rotor ------------------------------------
+        # Potencia entrante al rotor
         # CAPACIDAD DE PAR DEL EMBRAGUE. Un embrague sano pasa todo lo que el
         # motor entregue. Uno gastado tiene un TECHO: por encima de ese valor
         # no transmite más, simplemente patina más. Si el techo queda por
@@ -687,12 +646,12 @@ class ModeloVuelo:
         else:
             p_in = 0.0
 
-        # En autorrotación el flujo ascendente a traves del disco devuelve
+        # En autorrotación el flujo ascendente a través del disco devuelve
         # energía al rotor, proporcional a la velocidad de descenso.
         if not self.acoplado and self.vs_fpm < 0.0:
             p_in += self.K_AUTOROT * limitar(-self.vs_fpm / 1800.0, 0.0, 1.2)
 
-        # --- Ecuación del rotor ---------------------------------------------
+        # Ecuación del rotor
         #   dOmega/dt = (P_in - P_req) / (I * Omega)
         omega = max(self.n_rot_rpm, 12.0)
         d_omega = (p_in - self.pot_requerida) * self.K_INERCIA_ROTOR / omega
@@ -700,7 +659,7 @@ class ModeloVuelo:
         d_omega = limitar(d_omega, -55.0, 45.0)
         self.n_rot_rpm = limitar(self.n_rot_rpm + d_omega * dt, 0.0, 300.0)
 
-        # --- Resbalamiento del embrague -------------------------------------
+        # Resbalamiento del embrague
         # Un embrague de fricción SOLO transmite par mientras haya una
         # diferencia de velocidad entre sus dos caras. Con el embrague sano esa
         # diferencia es despreciable, la transmisión impone la relación 10:1 y
@@ -722,14 +681,12 @@ class ModeloVuelo:
         if not ctl.embrague:
             self.n_rot_rpm = aproximar(self.n_rot_rpm, 0.0, dt, 25.0)
 
-    # -----------------------------------------------------------------------
-    # 4. FLUIDOS DEL MOTOR
-    # -----------------------------------------------------------------------
+    # 4. Fluidos del motor
     def _paso_fluidos(self, dt):
         s = self.salud
         rel_rpm = self.n_eng_rpm / LIM["rpm_motor_crucero"]
 
-        # --- Presión de aceite -----------------------------------------------
+        # Presión de aceite
         # Depende de dos cosas: del régimen, porque la bomba es de engranajes
         # arrastrada por el motor, y de la VISCOSIDAD del aceite.
         #
@@ -761,7 +718,7 @@ class ModeloVuelo:
             p_obj = limitar(p_obj, 0.0, LIM["oil_p_max"] * 1.02)
         self.oil_p_psi = aproximar(self.oil_p_psi, p_obj, dt, 0.55)
 
-        # --- Temperatura de aceite y de culata ------------------------------
+        # Temperatura de aceite y de culata
         # El H-19 lleva un ventilador de refrigeración accionado por el propio
         # motor, así que la refrigeración NO depende solo de la velocidad de
         # traslación. Aun así, en estacionario prolongado el radial se
@@ -802,7 +759,7 @@ class ModeloVuelo:
         oil_obj = limitar(oil_obj, self.oat_c, LIM["oil_t_escala"])
         self.oil_t_c = aproximar(self.oil_t_c, oil_obj, dt, 95.0)
 
-        # --- Presión de combustible ------------------------------------------
+        # Presión de combustible
         # La bomba eléctrica auxiliar sigue a la barra: con la barra caída da
         # menos caudal, no se apaga de golpe. Sin ella queda solo la bomba
         # mecánica del motor, que necesita que el motor gire.
@@ -816,9 +773,7 @@ class ModeloVuelo:
         self.fuel_p_psi = aproximar(self.fuel_p_psi,
                                     base * s.bomba_combustible, dt, 0.45)
 
-    # -----------------------------------------------------------------------
-    # 5. TRANSMISIÓN PRINCIPAL
-    # -----------------------------------------------------------------------
+    # 5. Transmisión principal
     def _paso_transmision(self, dt):
         s = self.salud
         rel = self.n_rot_rpm / LIM["rpm_rotor_nom"]
@@ -845,9 +800,7 @@ class ModeloVuelo:
         t_obj = limitar(t_obj, self.oat_c, LIM["xmsn_t_escala"])
         self.xmsn_t_c = aproximar(self.xmsn_t_c, t_obj, dt, 110.0)
 
-    # -----------------------------------------------------------------------
-    # 6. COMBUSTIBLE
-    # -----------------------------------------------------------------------
+    # 6. Combustible
     def _combustible_disponible(self):
         sel = self.ctl.selector_tanque
         if sel == TANQUE_FWD:
@@ -890,14 +843,12 @@ class ModeloVuelo:
             else:
                 self.fuel_aft_l = max(0.0, self.fuel_aft_l - consumo)
 
-    # -----------------------------------------------------------------------
-    # 7. DINÁMICA DE VUELO
-    # -----------------------------------------------------------------------
+    # 7. Dinámica de vuelo
     def _paso_vuelo(self, dt):
         ctl = self.ctl
         s = self.salud
 
-        # --- Empuje del rotor ------------------------------------------------
+        # Empuje del rotor
         # El empuje va con el CUADRADO de las RPM: por eso perder régimen de rotor
         # es tan grave. La escala está elegida para que el estacionario quede
         # con el mando de paso colectivo a mitad de recorrido (empuje = 1,0 a col = 0,552),
@@ -907,7 +858,7 @@ class ModeloVuelo:
         empuje *= (1.0 - self.alt_ft / 30000.0)
         self.empuje = empuje
 
-        # --- Velocidad vertical ---------------------------------------------
+        # Velocidad vertical
         # Modelo cuasi-estático: el exceso de empuje define la velocidad
         # vertical de RÉGIMEN, y la aeronave la alcanza con una constante de
         # tiempo de 1,4 s. Es estable con cualquier paso de integración.
@@ -946,7 +897,7 @@ class ModeloVuelo:
         else:
             self.en_tierra = False
 
-        # --- Velocidad indicada ----------------------------------------------
+        # Velocidad indicada
         # El cíclico longitudinal fija una ACTITUD de cabeceo, y la actitud
         # fija la velocidad de equilibrio. Convenio de signos:
         #     ciclico_lon > 0  ->  nariz abajo (pitch negativo)  ->  acelera
@@ -958,18 +909,18 @@ class ModeloVuelo:
         self.ias_kt = aproximar(self.ias_kt, v_obj, dt, self.TAU_IAS)
         self.ias_kt = limitar(self.ias_kt, 0.0, 130.0)
 
-        # --- Alabeo y viraje --------------------------------------------------
+        # Alabeo y viraje
         roll_obj = 30.0 * ctl.ciclico_lat
         self.roll_deg = aproximar(self.roll_deg, roll_obj, dt, 0.8)
         if self.ias_kt > 8.0:
             # tasa de viraje = 1091 * tan(alabeo) / V   [grados/s, V en kt]
             self.turn_rate_dps = 1091.0 * _tan_grados(self.roll_deg) / max(self.ias_kt, 15.0)
         else:
-            # en estacionario, el rotor de cola es el que hace guinar
+            # en estacionario, el rotor de cola es el que hace guiñar
             self.turn_rate_dps = 12.0 * ctl.pedal * s.rotor_cola
 
-        # --- Pérdida de rotor de cola ------------------------------------------
-        # El par del rotor principal ya no se compensa: guinada incontrolada
+        # Pérdida de rotor de cola
+        # El par del rotor principal ya no se compensa: guiñada incontrolada
         # hacia la derecha (rotor que gira a izquierda visto desde arriba).
         #
         # QUÉ PAR ES EL QUE HACE GUIÑAR. Es el que la TRANSMISIÓN le entrega al
@@ -1004,23 +955,20 @@ class ModeloVuelo:
 
         self.hdg_deg = (self.hdg_deg + self.turn_rate_dps * dt) % 360.0
 
-        # --- Radionavegación (simplificada) -------------------------------------
+        # Radionavegación (simplificada)
         # Desviación respecto de un radial de referencia de 090 grados.
         err = ((self.hdg_deg - 90.0 + 180.0) % 360.0) - 180.0
         self.cdi = limitar(err / 12.0, -5.0, 5.0)
 
 
 def _tan_grados(g):
-    """Tangente para ángulos chicos, por serie, sin importar math."""
+    """Tangente por serie de Taylor: exacta al 0,1 % hasta 30°, el alabeo máximo."""
     r = g * 0.017453292519943295
-    # serie de Taylor: valida y precisa hasta ~60 grados
+    # a 45° ya erra un 1 % y a 60° un 8 %: no sirve para alabeos mayores
     r2 = r * r
     return r * (1.0 + r2 / 3.0 + 2.0 * r2 * r2 / 15.0)
 
 
-# ===========================================================================
-# PILOTO VIRTUAL
-# ===========================================================================
 class PilotoVirtual:
     """
     Controlador que mueve los mandos para cumplir un objetivo de vuelo.
@@ -1029,7 +977,7 @@ class PilotoVirtual:
     los instrumentos. La alternativa - escribir directamente "altímetro = 1500"
     - produciría un tablero incoherente en cuanto apareciera una falla.
     Acá el piloto pide, la física responde, y si la física no puede (porque el
-    motor fallo) las agujas lo muestran solas.
+    motor falló) las agujas lo muestran solas.
 
     También permite el ejercicio didáctico inverso: DESACTIVAR el piloto
     durante una falla para mostrar qué pasa si nadie reacciona.
@@ -1065,7 +1013,7 @@ class PilotoVirtual:
         m = self.m
         ctl = m.ctl
 
-        # ---- Detección de emergencia: motor caido en vuelo -----------------
+        # Detección de emergencia: motor caído en vuelo
         emergencia = (self.reacciona_a_fallas and not m.en_tierra
                       and m.pot_entregada < 0.12 and m.n_rot_rpm > 40.0)
 
@@ -1080,10 +1028,10 @@ class PilotoVirtual:
             ctl.ciclico_lat = rampa(ctl.ciclico_lat, 0.0, dt, 0.5)
             return
 
-        # ---- Control de altitud mediante colectivo --------------------------
+        # Control de altitud mediante colectivo
         # Lazo en cascada: error de altura -> velocidad vertical deseada ->
         # posición de colectivo. Es como vuela una persona: primero decide
-        # cuanto quiere subir, después cuanto tira de la palanca.
+        # cuánto quiere subir, después cuánto tira de la palanca.
         err_alt = self.alt_obj_ft - m.alt_ft
         vs_deseada = limitar(err_alt * 0.9, -700.0, 700.0)
         err_vs = vs_deseada - m.vs_fpm
@@ -1095,7 +1043,7 @@ class PilotoVirtual:
             col_obj -= 0.30
         ctl.colectivo = rampa(ctl.colectivo, limitar(col_obj, 0.0, 1.0), dt, 0.55)
 
-        # ---- Gobernador de RPM (mariposa) ------------------------------------
+        # Gobernador de RPM (mariposa)
         # PI puro sobre el error de RPM del motor. El término integral ES la
         # posición de reposo de la mariposa, por eso se guarda entre ciclos.
         # Un gobernador así encuentra solo el punto correcto tanto en
@@ -1106,13 +1054,13 @@ class PilotoVirtual:
         thr_obj = limitar(self._i_thr + err_rpm * 0.00009, 0.05, 1.0)
         ctl.throttle = rampa(ctl.throttle, thr_obj, dt, 0.6)
 
-        # ---- Control de velocidad mediante cíclico longitudinal --------------
+        # Control de velocidad mediante cíclico longitudinal
         err_ias = self.ias_obj_kt - m.ias_kt
         self._i_ias = limitar(self._i_ias + err_ias * dt * 0.0010, -0.30, 0.30)
         lon_obj = (self.ias_obj_kt / 8.5) / 12.0 + err_ias * 0.0030 + self._i_ias
         ctl.ciclico_lon = rampa(ctl.ciclico_lon, limitar(lon_obj, -1.0, 1.0), dt, 0.35)
 
-        # ---- Control de rumbo mediante cíclico lateral ------------------------
+        # Control de rumbo mediante cíclico lateral
         # SIN ROTOR DE COLA EL PILOTO NO PERSIGUE EL RUMBO. Un helicóptero
         # girando por par no compensado no se endereza con el cíclico: el
         # cíclico inclina el disco y hace virar, que es otro eje y otro

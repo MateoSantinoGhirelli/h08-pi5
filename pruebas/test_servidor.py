@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-test_servidor.py - que el visitante no pueda operar el tablero
-==============================================================
+"""Que el visitante no pueda operar el tablero.
 
-Levanta el servidor de verdad, en un puerto libre, con un nucleo de mentira,
-y le pega con pedidos HTTP como los haria un navegador -o como los haria un
+Levanta el servidor de verdad, en un puerto libre, con un núcleo de mentira,
+y le pega con pedidos HTTP como los haría un navegador -o como los haría un
 alumno curioso desde la barra de direcciones-.
 
-Lo que se comprueba no es que los botones esten escondidos. Es que el
+Lo que se comprueba no es que los botones estén escondidos. Es que el
 SERVIDOR conteste 403 cuando la orden no viene de un administrador. Esconder
 los botones no protege nada: cualquiera abre la consola del navegador.
 
@@ -17,6 +15,7 @@ import http.client
 import json
 import os
 import shutil
+import socket
 import tempfile
 import threading
 import time
@@ -28,7 +27,7 @@ from pruebas.comun import Prueba
 
 
 class NucleoFalso:
-    """Lo minimo que el servidor le pide al nucleo. Anota lo que le ordenan."""
+    """Lo mínimo que el servidor le pide al núcleo. Anota lo que le ordenan."""
 
     def __init__(self):
         self.catalogo = {"fases": [], "escenarios": [], "fallas": [],
@@ -86,7 +85,7 @@ class ConServidor(Prueba):
         self.tmp = tempfile.mkdtemp()
         self.web = os.path.join(self.tmp, "web")
         os.makedirs(self.web)
-        # paginas de mentira, para no depender de las de verdad
+        # páginas de mentira, para no depender de las de verdad
         for f, t in (("tablero.html", "<html>TABLERO PUBLICO</html>"),
                      ("mando.html", "<html>BOTONERA</html>"),
                      ("sin_permiso.html", "<html>HACE FALTA EL QR</html>")):
@@ -120,20 +119,20 @@ class ElVisitante(ConServidor):
         v = Cliente(self.puerto)
         cod, cuerpo, _ = v.get("/")
         self.comprobar_igual("puede ver el tablero", cod, 200)
-        self.comprobar("y es la pagina publica", "TABLERO PUBLICO" in cuerpo)
+        self.comprobar("y es la página publica", "TABLERO PUBLICO" in cuerpo)
 
         cod, _c, _ = v.get("/api/estado")
         self.comprobar_igual("puede leer el estado en vivo", cod, 200)
         cod, cuerpo, _ = v.get("/api/catalogo")
-        self.comprobar_igual("puede leer el catalogo", cod, 200)
-        self.comprobar_igual("y el catalogo le dice que no es admin",
+        self.comprobar_igual("puede leer el catálogo", cod, 200)
+        self.comprobar_igual("y el catálogo le dice que no es admin",
                              json.loads(cuerpo).get("admin"), False)
 
         cod, cuerpo, _ = v.get("/mando")
         self.comprobar_igual("en /mando le sale que hace falta el QR", cod, 200)
         self.comprobar("y no la botonera", "BOTONERA" not in cuerpo)
         cod, _c, _ = v.get("/tecnico")
-        self.comprobar_igual("la vista tecnica ya no existe para nadie", cod, 404)
+        self.comprobar_igual("la vista técnica ya no existe para nadie", cod, 404)
 
         antes = len(self.nucleo.ordenes)
         for ruta in ("/api/modo/1", "/api/modo/3?id=OIL_PRESS_LOSS",
@@ -141,7 +140,7 @@ class ElVisitante(ConServidor):
                      "/api/accion/velocidad?valor=4"):
             cod, _c, _ = v.post(ruta)
             self.comprobar_igual("POST %s -> prohibido" % ruta[:34], cod, 403)
-        self.comprobar_igual("y el nucleo no recibio NINGUNA orden",
+        self.comprobar_igual("y el núcleo no recibió NINGUNA orden",
                              len(self.nucleo.ordenes), antes)
 
         cod, _c, _ = v.post("/api/mando/tomar")
@@ -159,7 +158,7 @@ class ElProfesor(ConServidor):
         p = Cliente(self.puerto)
         cod, cuerpo, destino = p.get("/mando?k=" + self.acceso.clave)
         self.comprobar_igual("el QR redirige", cod, 302)
-        self.comprobar_igual("a la direccion sin la clave", destino, "/mando")
+        self.comprobar_igual("a la dirección sin la clave", destino, "/mando")
         self.comprobar("y deja cookie", p.cookie and p.cookie.startswith("h08="))
         self.comprobar("la clave no quedo en la URL de destino", "k=" not in (destino or ""))
 
@@ -171,7 +170,7 @@ class ElProfesor(ConServidor):
         antes = len(self.nucleo.ordenes)
         cod, _c, _ = p.post("/api/modo/3?id=OIL_PRESS_LOSS")
         self.comprobar_igual("puede meter una falla", cod, 200)
-        self.comprobar_igual("y la orden llego al nucleo", len(self.nucleo.ordenes), antes + 1)
+        self.comprobar_igual("y la orden llego al núcleo", len(self.nucleo.ordenes), antes + 1)
         self.comprobar_igual("con lo que corresponde", self.nucleo.ordenes[-1],
                              ("modo_falla", "OIL_PRESS_LOSS"))
 
@@ -180,9 +179,9 @@ class ElProfesor(ConServidor):
         self.comprobar("se ve como admin", e["admin"])
         self.comprobar("y con el mando", e["mando"])
 
-        # el tablero muestra el atajo a /mando solo si el catalogo dice que si
+        # el tablero muestra el atajo a /mando solo si el catálogo dice que si
         cod, cuerpo, _ = p.get("/api/catalogo")
-        self.comprobar("el catalogo le avisa al tablero que es admin",
+        self.comprobar("el catálogo le avisa al tablero que es admin",
                        json.loads(cuerpo).get("admin"))
 
 
@@ -204,7 +203,7 @@ class ElAyudante(ConServidor):
         self.comprobar_igual("su orden se rechaza con 409", cod, 409)
         self.comprobar("explicando que el mando lo tiene otro",
                        "mando" in json.loads(cuerpo).get("motivo", "").lower())
-        self.comprobar_igual("y el nucleo no la recibio", len(self.nucleo.ordenes), antes)
+        self.comprobar_igual("y el núcleo no la recibió", len(self.nucleo.ordenes), antes)
 
         cod, _c, _ = a.post("/api/mando/pedir")
         self.comprobar_igual("puede pedir el mando", cod, 200)
@@ -218,11 +217,11 @@ class ElAyudante(ConServidor):
 
         antes = len(self.nucleo.ordenes)
         cod, _c, _ = a.post("/api/accion/pausa?valor=true")
-        self.comprobar_igual("ahora si le pasan las ordenes", cod, 200)
-        self.comprobar_igual("y llegan al nucleo", len(self.nucleo.ordenes), antes + 1)
+        self.comprobar_igual("ahora si le pasan las órdenes", cod, 200)
+        self.comprobar_igual("y llegan al núcleo", len(self.nucleo.ordenes), antes + 1)
         cod, _c, _ = a.post("/api/accion/borrar_todo?valor=true")
         self.comprobar_igual("una orden que no existe se rechaza con 400", cod, 400)
-        self.comprobar_igual("y no llega al nucleo", len(self.nucleo.ordenes), antes + 1)
+        self.comprobar_igual("y no llega al núcleo", len(self.nucleo.ordenes), antes + 1)
 
         cod, _c, _ = p.post("/api/accion/pausa?valor=false")
         self.comprobar_igual("y al profesor ya no", cod, 409)
@@ -249,7 +248,7 @@ class RenovarLaClave(ConServidor):
         vieja = self.acceso.clave
         nueva = self.acceso.renovar_clave()
         cod, _c, _ = p.post("/api/modo/1")
-        self.comprobar_igual("la sesion del profesor se corta", cod, 403)
+        self.comprobar_igual("la sesión del profesor se corta", cod, 403)
         z = Cliente(self.puerto)
         cod, cuerpo, _ = z.get("/mando?k=" + vieja)
         self.comprobar("la clave vieja ya no entra", "BOTONERA" not in cuerpo)
@@ -271,6 +270,54 @@ class LaClaveNoSeSirve(ConServidor):
                                  self.acceso.clave in cuerpo, False)
 
 
+class ElCuerpoInventado(ConServidor):
+
+    def test_el_cuerpo_inventado(self):
+        """Un Content-Length enorme o roto se rechaza con 413 sin leer ni reservar nada."""
+        for largo in ("1500000000", "-5", "abc"):
+            s = socket.create_connection(("127.0.0.1", self.puerto), timeout=5)
+            s.sendall(("POST /api/modo/4 HTTP/1.1\r\nHost: x\r\nContent-Length: %s\r\n\r\n"
+                       % largo).encode())
+            respuesta = s.recv(200).decode("latin-1")
+            s.close()
+            self.comprobar("Content-Length %s -> 413 en el momento" % largo,
+                           respuesta.startswith("HTTP/1.1 413"), respuesta[:40])
+        self.comprobar_igual("y el núcleo no recibió ninguna orden", self.nucleo.ordenes, [])
+        p = self.profesor_con_el_mando()
+        cod, _c, _ = p.post("/api/accion/pausa?valor=true")
+        self.comprobar_igual("las órdenes de la botonera, sin cuerpo, siguen pasando", cod, 200)
+
+
+class LaConexionAbandonada(ConServidor):
+
+    def test_la_conexion_abandonada(self):
+        """Un celular que se fue sin cerrar no se queda con un hilo para siempre."""
+        self.comprobar("el servidor tiene tiempo de espera",
+                       0 < (servidor_web.Manejador.timeout or 0) <= 120)
+        vieja = servidor_web.Manejador.timeout
+        servidor_web.Manejador.timeout = 0.5      # el mismo mecanismo, sin esperar 60 s
+        try:
+            s = socket.create_connection(("127.0.0.1", self.puerto), timeout=5)
+            s.sendall(b"GET /api/estado HTTP/1.1\r\nHost: x\r\n\r\n")
+            time.sleep(1.5)
+            s.settimeout(2)
+            # La respuesta puede llegar en dos tramos: se lee todo hasta el cierre.
+            cerrada = False
+            try:
+                while True:
+                    if s.recv(4096) == b"":
+                        cerrada = True
+                        break
+            except socket.timeout:
+                cerrada = False                   # sigue abierta: el hilo sigue esperando
+            except OSError:
+                cerrada = True                    # la cerró de golpe (en Windows, reset)
+            s.close()
+        finally:
+            servidor_web.Manejador.timeout = vieja
+        self.comprobar("pasado el tiempo, el servidor cierra la conexión", cerrada)
+
+
 class ElServidorAbierto(ConServidor):
     """El de la computadora propia: con acceso=None el servidor deja mandar, y
     /mando tiene que mostrar la botonera; si no, no habría forma de llegar a la
@@ -284,14 +331,14 @@ class ElServidorAbierto(ConServidor):
         cod, cuerpo, _ = c.get("/")
         self.comprobar_igual("se ve el tablero", cod, 200)
         cod, cuerpo, _ = c.get("/mando")
-        self.comprobar("y TAMBIEN la botonera, sin clave", "BOTONERA" in cuerpo)
+        self.comprobar("y TAMBIÉN la botonera, sin clave", "BOTONERA" in cuerpo)
         cod, cuerpo, _ = c.get("/api/catalogo")
-        self.comprobar("el catalogo dice que es admin (aparece el atajo)",
+        self.comprobar("el catálogo dice que es admin (aparece el atajo)",
                        json.loads(cuerpo).get("admin"))
         antes = len(self.nucleo.ordenes)
         cod, _x, _ = c.post("/api/modo/1")
-        self.comprobar_igual("y las ordenes pasan", cod, 200)
-        self.comprobar_igual("y llegan al nucleo", len(self.nucleo.ordenes), antes + 1)
+        self.comprobar_igual("y las órdenes pasan", cod, 200)
+        self.comprobar_igual("y llegan al núcleo", len(self.nucleo.ordenes), antes + 1)
 
 
 if __name__ == "__main__":

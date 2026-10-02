@@ -1,37 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 prueba-general - la prueba del tablero entero, de punta a punta
-=============================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""La prueba del tablero entero, de punta a punta.
 
     python3 -m h08 prueba-general              la prueba completa (unos 15 min)
     python3 -m h08 prueba-general --sin-pantalla  sin preguntar por la pantalla
     python3 -m h08 prueba-general --simulado --auto
                                                cómo es, sin hardware
 
-Es la que se hace antes de una muestra, o después de armar o tocar algo.
-Pregunta sí o no en cada paso y al final guarda un informe fechado en
-informes/prueba_general_FECHA.txt.
+Es la que se hace antes de una muestra, o después de armar o tocar algo. Pregunta sí
+o no en cada paso y guarda un informe fechado en datos/informes/.
 
-  0. DIAGNÓSTICO      lo de python3 -m h08 diagnostico, sin preguntar nada
-  A. HARDWARE SOLO    con el servicio detenido, el programa maneja las placas
-                      directo:
-                        A1 prueba de lámparas
-                        A2 las 20 agujas al medio de su escala, de a tres
-                        A3 las 20 agujas barriendo JUNTAS mientras se mide la
-                           alimentación: es la prueba de la fuente de servos
-                        A4 brújula N-E-S-O-N
-                        A5 todo suelto y apagado
-  B. TABLERO ENTERO   arranca el servicio y lo maneja como el profesor, por
-                      la misma API que usa la página de mando:
-                        B1 arranca y contesta
-                        B2 la pantalla de la Raspberry muestra el tablero
-                        B3 un celular entra por wifi
-                        B4 prueba de luces desde el mando
-                        B5 falla: pérdida de presión de aceite
-                        B6 falla: generador (luz GENERATOR)
-                        B7 vuelve a vuelo normal y suelta el mando
+  0. diagnóstico   lo de python3 -m h08 diagnostico, sin preguntar nada
+  A. hardware solo con el servicio detenido, manejando las placas directo:
+                   lámparas, las 20 agujas al medio de a tres, las 20 barriendo
+                   juntas mientras se mide la alimentación (es la prueba de la
+                   fuente de servos), brújula N-E-S-O-N y todo suelto
+  B. tablero entero con el servicio andando, operándolo como el profesor por la
+                   misma API que la página de mando: arranque, pantalla, un
+                   celular por wifi, prueba de luces, dos fallas (aceite y
+                   generador) y la vuelta a vuelo normal
 
 Necesita sudo para detener y arrancar el servicio (lo pide una vez).
 """
@@ -57,9 +43,7 @@ SA = "A. HARDWARE SOLO (servicio detenido)"
 SB = "B. TABLERO ENTERO (servicio andando)"
 
 
-# ===========================================================================
 # Servicio y API
-# ===========================================================================
 def systemctl(orden, simulado):
     if simulado:
         return True
@@ -140,9 +124,7 @@ def servidor_simulado():
     return puerto, srv, nucleo
 
 
-# ===========================================================================
 # 0. Diagnóstico
-# ===========================================================================
 def parte0(inf, simulado):
     print("\n" + "=" * 70 + "\n " + S0 + "\n" + "=" * 70)
     if simulado:
@@ -163,9 +145,7 @@ def parte0(inf, simulado):
         print("   [!!] %s\n        -> %s" % (t, arr))
 
 
-# ===========================================================================
 # A. Hardware solo
-# ===========================================================================
 def leer_alimentacion():
     """(throttled, 5 V de entrada) de la Pi, o (None, None)."""
     try:
@@ -206,7 +186,6 @@ def parteA(inf, P, simulado):
     luces = [it for it in TABLERO if it["actuador"] == LED and it.get("canal")
              and it["canal"][0] in act.placas]
     try:
-        # A1 ---------------------------------------------------------------
         print("\n  A1. Prueba de lámparas")
         for it in luces:
             act.escribir_led(it["canal"], True)
@@ -221,7 +200,6 @@ def parteA(inf, P, simulado):
             act.escribir_led(it["canal"], False)
         act.refrescar()
 
-        # A2 ---------------------------------------------------------------
         print("\n  A2. Las %d agujas al MEDIO de su escala, de a %d"
               % (len(servos), ARRANQUE["canales_por_tanda"]))
         medio = {}
@@ -242,7 +220,6 @@ def parteA(inf, P, simulado):
             "" if r == "s" else (P.nota("¿Cuál no?") +
                                  "  -> python3 -m h08 instrumento ESA"))
 
-        # A3 ---------------------------------------------------------------
         print("\n  A3. Las %d agujas barriendo JUNTAS (prueba de la fuente de servos)"
               % len(servos))
         th0, v0 = leer_alimentacion()
@@ -285,7 +262,6 @@ def parteA(inf, P, simulado):
             act.escribir_servo(it["canal"], medio[it["id"]])
         act.refrescar()
 
-        # A4 ---------------------------------------------------------------
         print("\n  A4. Brújula: N, E, S, O y N")
         if gestor is None:
             inf.anotar(SA, "A4 brújula", "SALTEADO", "no se pudo abrir el GPIO")
@@ -302,7 +278,6 @@ def parteA(inf, P, simulado):
                 SA, "A4 brújula N-E-S-O-N",
                 "" if r == "s" else "python3 -m h08 luces-motor --motor")
 
-        # A5 ---------------------------------------------------------------
         print("\n  A5. Todo suelto y apagado")
         for it in servos:
             act.soltar(it["canal"])
@@ -324,9 +299,7 @@ def parteA(inf, P, simulado):
     return True
 
 
-# ===========================================================================
 # B. Tablero entero
-# ===========================================================================
 def parteB(inf, P, simulado, sin_pantalla):
     print("\n" + "=" * 70 + "\n " + SB + "\n" + "=" * 70)
     srv = nucleo = None
@@ -341,7 +314,6 @@ def parteB(inf, P, simulado, sin_pantalla):
         print("  Arrancando el servicio (las agujas se acomodan de a tres)...")
         systemctl("start", simulado)
     try:
-        # B1 ---------------------------------------------------------------
         ok = mando.esperar(45)
         (inf.bien if ok else inf.mal)(SB, "B1 el servicio arranca y la página contesta",
                                       "" if ok else "journalctl -u %s -n 50" % banco.SERVICIO)
@@ -355,7 +327,6 @@ def parteB(inf, P, simulado, sin_pantalla):
                 else "faltan placas o no abrió el I2C: python3 -m h08 diagnostico")
         I.dormir(4.0)
 
-        # B2 ---------------------------------------------------------------
         if sin_pantalla:
             inf.anotar(SB, "B2 pantalla de la Raspberry", "SALTEADO", "--sin-pantalla")
         else:
@@ -366,7 +337,6 @@ def parteB(inf, P, simulado, sin_pantalla):
                 SB, "B2 pantalla de la Raspberry",
                 "" if r == "s" else "bash deploy/kiosco.sh  (y ver python3 -m h08 diagnostico, punto 6)")
 
-        # B3 ---------------------------------------------------------------
         from h08.web import qr
         from h08.web import servidor as servidor_web
         url = servidor_web.direccion(puerto)
@@ -383,7 +353,6 @@ def parteB(inf, P, simulado, sin_pantalla):
             SB, "B3 un celular entra por wifi",
             "" if r == "s" else "sudo bash deploy/punto_de_acceso.sh estado / encender")
 
-        # B4 ---------------------------------------------------------------
         if not mando.entrar():
             inf.mal(SB, "B4-B7 tomar el mando con la clave del profesor",
                     "¿otro dispositivo tiene el mando? Soltarlo desde /mando")
@@ -401,7 +370,6 @@ def parteB(inf, P, simulado, sin_pantalla):
             return False
         (inf.bien if r == "s" else inf.mal)(SB, "B4 prueba de luces desde el mando")
 
-        # B5 ---------------------------------------------------------------
         print("\n  B5. Falla: pérdida de presión de aceite (crucero a 1500 ft, rumbo 090)")
         # esperas de verdad (no se acortan en --simulado): las pone el modelo
         mando.post("/api/modo/3?id=OIL_PRESS_LOSS")
@@ -418,7 +386,6 @@ def parteB(inf, P, simulado, sin_pantalla):
             return False
         (inf.bien if r == "s" else inf.mal)(SB, "B5 el tablero muestra la falla de aceite")
 
-        # B6 ---------------------------------------------------------------
         print("\n  B6. Falla: generador")
         mando.post("/api/modo/3?id=GEN_FAIL")
         time.sleep(6.0)
@@ -429,7 +396,6 @@ def parteB(inf, P, simulado, sin_pantalla):
             return False
         (inf.bien if r == "s" else inf.mal)(SB, "B6 el tablero muestra la falla del generador")
 
-        # B7 ---------------------------------------------------------------
         mando.post("/api/accion/velocidad?valor=1")
         mando.post("/api/modo/1")
         mando.post("/api/mando/ceder")

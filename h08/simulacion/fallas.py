@@ -1,43 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-fallas.py - catálogo declarativo de fallas y motor de inyección
-================================================================
+"""Las fallas son datos, no código: cada una es un diccionario de esta lista.
 
-POR QUÉ LAS FALLAS SON DATOS Y NO CODIGO
---------------------------------------------------------------------------
-Escribir  if modo == "falla_motor": rpm = 0  produce un simulador que miente:
-el resto de las agujas no se entera.
+Una falla no toca ninguna aguja: degrada un sistema y el modelo físico hace el resto.
+Cortar el motor no pone el tacómetro en cero, pone salud.motor = 0, y entonces cae la
+potencia, la rueda libre desacopla, las agujas del tacómetro se separan, se desploma
+la presión de aceite, se enciende la luz, el generador sale de línea y el amperímetro
+pasa a descarga. Todo eso emerge solo, y agregar una falla es agregar una entrada.
 
-Acá una falla NO toca ninguna aguja. Una falla degrada un SISTEMA, y el
-modelo físico se encarga del resto. Cortar el motor no pone el tacómetro en
-cero: pone salud.motor = 0, y entonces la potencia entregada cae, el rotor
-deja de recibir energía, la rueda libre desacopla, las dos agujas del
-tacómetro se separan, la presión de aceite se desploma, la de transmisión
-también, se enciende la luz roja, el generador sale de línea, el voltímetro
-baja a 24 V y el amperímetro pasa a descarga. Todo eso EMERGE solo.
-
-Cada falla es un diccionario. Agregar una falla nueva no requiere tocar la
-lógica: se agrega una entrada a la lista.
-
-DOS NIVELES DE FALLA
---------------------------------------------------------------------------
-  FALLA DE SISTEMA     -> degrada la máquina (efecto tipo "salud"/"suma")
-  FALLA DE INDICACIÓN  -> la máquina está bien, miente el instrumento
-                          (efecto tipo "ind")
-Tener las dos en el simulador permite el ejercicio: "el altímetro está
-clavado: ¿se cayó el helicóptero o se tapó la toma estática?".
+Las de indicación, en cambio, dejan la máquina sana y hacen mentir al instrumento:
+«el altímetro está clavado, ¿se cayó el helicóptero o se tapó la estática?».
 """
 
 from h08.util import limitar, mezclar
 from h08.simulacion.senales import IND_CONGELADO, IND_FIJO, IND_RUIDO, IND_OSCILA
 
-# --- Severidades -----------------------------------------------------------
+# Severidades
 SEV_LEVE = "LEVE"
 SEV_MEDIA = "MEDIA"
 SEV_GRAVE = "GRAVE"
 SEV_CRITICA = "CRITICA"
 
-# --- Sistemas de la aeronave (para agrupar en la app) ----------------------
+# Sistemas de la aeronave (para agrupar en la app)
 SIS_MOTOR = "MOTOR"
 SIS_COMBUSTIBLE = "COMBUSTIBLE"
 SIS_LUBRICACION = "LUBRICACION"
@@ -47,10 +30,7 @@ SIS_ROTORES = "ROTORES"
 SIS_INSTRUMENTOS = "INSTRUMENTOS"
 
 
-# ===========================================================================
-# CATÁLOGO DE FALLAS
-# ===========================================================================
-# Campos:
+# Campos de cada falla:
 #   id            identificador único
 #   nombre        texto para la app
 #   sistema       agrupador
@@ -62,11 +42,10 @@ SIS_INSTRUMENTOS = "INSTRUMENTOS"
 #   instr         instrumentos donde el alumno debería verlo
 #   síntomas      que se observa
 #   proc          procedimiento correcto según el manual del tipo
-# ===========================================================================
 
 CATALOGO = [
 
-    # ---------------- MOTOR -------------------------------------------------
+    # Motor
     {
         "id": "ENG_FAIL_TOTAL",
         "nombre": "Falla total de motor",
@@ -184,7 +163,7 @@ CATALOGO = [
                 "las agujas pero la culata no se mueve, es el instrumento.",
     },
 
-    # ---------------- LUBRICACIÓN -------------------------------------------
+    # Lubricación
     {
         "id": "OIL_PRESS_LOSS",
         "nombre": "Pérdida de presión de aceite de motor",
@@ -257,7 +236,7 @@ CATALOGO = [
                 "Si no baja, aterrizar de inmediato: riesgo de incendio.",
     },
 
-    # ---------------- COMBUSTIBLE -------------------------------------------
+    # Combustible
     {
         "id": "FUEL_PUMP_FAIL",
         "nombre": "Falla de bomba de combustible",
@@ -330,7 +309,7 @@ CATALOGO = [
                 "El motor rearranca solo si las RPM de rotor se mantienen.",
     },
 
-    # ---------------- TRANSMISIÓN -------------------------------------------
+    # Transmisión
     {
         "id": "XMSN_PRESS_LOSS",
         "nombre": "Pérdida de presión de aceite de transmisión",
@@ -390,7 +369,7 @@ CATALOGO = [
                 "Aterrizar de inmediato.",
     },
 
-    # ---------------- ROTORES -----------------------------------------------
+    # Rotores
     {
         "id": "LOW_ROTOR_RPM",
         "nombre": "RPM de rotor bajas",
@@ -442,7 +421,7 @@ CATALOGO = [
                 "estabilizador vertical y más rápido gira.",
     },
 
-    # ---------------- ELÉCTRICO ---------------------------------------------
+    # Eléctrico
     {
         "id": "GEN_FAIL",
         "nombre": "Falla del generador",
@@ -528,7 +507,7 @@ CATALOGO = [
                 "desprolijidad, es redundancia.",
     },
 
-    # ---------------- INSTRUMENTOS (fallas de INDICACIÓN) --------------------
+    # Instrumentos (fallas de indicación)
     {
         "id": "PITOT_BLOCK",
         "nombre": "Obstrucción del tubo pitot",
@@ -676,9 +655,6 @@ for _f in CATALOGO:
     CATALOGO_POR_ID[_f["id"]] = _f
 
 
-# ===========================================================================
-# MOTOR DE INYECCIÓN DE FALLAS
-# ===========================================================================
 class MotorFallas:
     """
     Aplica las fallas activas sobre el modelo en cada paso.
@@ -700,7 +676,7 @@ class MotorFallas:
         self.activas = {}          # id -> {"t": segundos_desde_activacion, "def": dict}
         self._fase = 0.0
 
-    # -- API ----------------------------------------------------------------
+    # API
     def activar(self, id_falla):
         d = CATALOGO_POR_ID.get(id_falla)
         if d is None:
@@ -724,7 +700,7 @@ class MotorFallas:
     def lista_activas(self):
         return list(self.activas.keys())
 
-    # -- ciclo --------------------------------------------------------------
+    # Ciclo
     def paso(self, dt):
         m = self.m
         m.salud.reiniciar()
@@ -750,7 +726,7 @@ class MotorFallas:
             for ef in d["efectos"]:
                 self._aplicar(ef, p, st)
 
-    # -- aplicación de un efecto -------------------------------------------
+    # Aplicación de un efecto
     def _aplicar(self, ef, p, st):
         m = self.m
         tipo = ef["t"]

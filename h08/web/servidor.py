@@ -1,43 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-h08/web/servidor.py - la página web del tablero, con la biblioteca estándar
-========================================================================
+"""La página del tablero, con http.server: la Pi no necesita internet ni paquetes.
 
-QUÉ SIRVE
----------------------------------------------------------------------------
-  /            el tablero en vivo. Lo abre cualquiera que esté en la red.
-  /mando       la botonera del profesor. Exige la clave que viaja en el QR
-               de administrador (ver acceso.py).
-  /qr          el código QR de la dirección, grande, para proyectar.
-  /cartel      hoja A4 para imprimir y pegar junto al tablero: el QR para
-               conectarse a la red wifi de la Raspberry y el QR de la página.
-  /qr_wifi.svg el QR para entrar a la red wifi del tablero (la pantalla de la
-               Raspberry lo muestra en una esquina, junto al de la página).
-  /caratulas/  las mismas carátulas que están impresas en cada instrumento
-               (h08/web/static/caratulas, las copia herramientas/caratulas_web.py).
-  /api/...     los datos que piden esas páginas, en JSON.
+Sirve el tablero en vivo (/), la botonera del profesor (/mando), los QR de la
+dirección y de la red wifi, el cartel A4 para imprimir, las carátulas y el estado en
+JSON (/api/...). La página consulta cada 200 ms: la suavidad de las agujas la da el
+modelo, no el transporte.
 
-Usa sólo la biblioteca estándar de Python (http.server): la Raspberry no
-necesita internet ni instalar paquetes para servir la página. La página
-consulta el estado cada 200 ms; la suavidad de las agujas la da el modelo, no
-el transporte.
-
-QUIÉN PUEDE MANDAR
----------------------------------------------------------------------------
-Todas las órdenes (cambiar de modo, activar una falla, pausar) se rechazan
-con 403 si el pedido no viene de una sesión de administrador, y con 409 si
-ese administrador no tiene el mando en ese momento. La verificación está en
-el servidor, no en la página: esconder los botones no protege nada; lo que
-protege es rechazar el pedido.
-
-LA DIRECCIÓN QUE SE MUESTRA
----------------------------------------------------------------------------
-La dirección depende de la red en la que esté la Raspberry. Cuando levanta
-su propia red wifi (punto_de_acceso.sh) no tiene ruta hacia afuera, así que
-la dirección se busca entre las interfaces, dando prioridad a la del punto
-de acceso, que es por donde entran los visitantes. Se calcula en cada pedido
-y no una sola vez al arrancar, porque al encender la Raspberry el servicio
-puede arrancar antes que la red.
+Toda orden se rechaza con 403 si no viene de un admin y con 409 si ese admin no
+tiene el mando. La verificación está acá y no en la página: esconder los botones no
+protege nada, lo que protege es rechazar el pedido (docs/acceso.md).
 """
 import json
 import os
@@ -55,17 +26,18 @@ from h08.web import qr
 # /api/modo/). Cualquier otra cosa se rechaza con 400.
 ACCIONES = ("pausa", "velocidad", "prueba_luces", "piloto_reactivo", "ciclar",
             "activar_falla", "quitar_falla")
+# Las órdenes viajan en la dirección y las páginas no mandan cuerpo. El tope importa
+# porque el cuerpo se lee antes de saber quién pide: sin él, un Content-Length
+# inventado hace que Python reserve esa memoria de una vez (1,5 GB con un pedido).
+CUERPO_MAX = 4096
 _SCRIPT_AP = rutas.PUNTO_DE_ACCESO
 
 
-# ===========================================================================
-# Red
-# ===========================================================================
 def datos_punto_de_acceso():
-    """Nombre, clave e IP de la red wifi propia, leídos de punto_de_acceso.sh.
+    """Nombre, clave e IP de la red wifi propia, leídos de deploy/punto_de_acceso.sh.
 
-    Se leen del script en vez de repetirlos acá: si se cambia la clave de la
-    red en un solo lugar, el cartel impreso no puede quedar desactualizado.
+    Se leen del script en vez de repetirlos acá: así el cartel impreso no puede
+    quedar desactualizado si se cambia la clave de la red.
     """
     datos = {"red": "Tablero-H08", "clave": "", "ip": "10.55.0.1"}
     try:
@@ -98,11 +70,10 @@ def puerto_libre(preferido, intentos=20):
 def ip_de_red():
     """La IP de esta máquina en la red local, para entrar desde el celular.
 
-    1. Si hay una ruta hacia afuera, la IP de la interfaz por la que se
-       saldría. No se manda ningún paquete: sólo se consulta la tabla de rutas.
-    2. Si no la hay -la Raspberry como punto de acceso, sin internet-, las
-       direcciones de sus interfaces, con prioridad para la del punto de
-       acceso.
+    Si hay ruta hacia afuera, la IP de la interfaz por la que se saldría (se consulta
+    la tabla de rutas, no se manda ningún paquete). Si no la hay, porque la Pi es el
+    punto de acceso, las de sus interfaces, con prioridad para la del punto de acceso.
+    Se calcula en cada pedido: al encender, el servicio puede arrancar antes que la red.
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -133,9 +104,7 @@ def direccion(puerto):
     return "http://%s:%d/" % (ip or "localhost", puerto)
 
 
-# ===========================================================================
-# Páginas generadas en el momento (llevan el QR de la dirección actual)
-# ===========================================================================
+# Las dos páginas que se arman en el momento, porque llevan el QR de la dirección
 _PAGINA_QR = """<!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tablero H-08 &middot; entrar desde el celular</title>
@@ -195,25 +164,24 @@ Si el celular se desconecta solo, volv&eacute; a conectarte y us&aacute; el segu
 </div></body></html>"""
 
 
-# ===========================================================================
-# El servidor
-# ===========================================================================
 class Manejador(BaseHTTPRequestHandler):
     """Atiende los pedidos. ThreadingHTTPServer usa un hilo por pedido, así
     que muchos celulares pueden mirar a la vez; la simulación corre en su
     propio hilo y ningún pedido la frena."""
 
     protocol_version = "HTTP/1.1"
+    # Un celular que se va de la red sin cerrar la conexión dejaba su hilo esperando
+    # para siempre. La página pide cada 200 ms: una conexión en uso nunca llega a 60 s.
+    timeout = 60
     nucleo = None                 # el HiloSimulacion (lo completa crear())
     estaticos = None              # carpeta con las páginas .html
     puerto = 8000
     donde = "esta computadora"
     acceso = None                 # acceso.Acceso, o None para no pedir clave
 
-    # Nombre de la cookie de sesión. Corto y sin decir de qué es.
+    # nombre de la cookie de sesión: corto y sin decir de qué es
     COOKIE = "h08"
 
-    # -- utilidades ---------------------------------------------------------
     def _url_publica(self):
         return direccion(self.puerto)
 
@@ -225,11 +193,12 @@ class Manejador(BaseHTTPRequestHandler):
         self.send_header("Content-Type", tipo)
         self.send_header("Content-Length", str(len(cuerpo)))
         self.send_header("Cache-Control", cache or "no-store")
-        self.end_headers()
         try:
+            self.end_headers()
             self.wfile.write(cuerpo)
-        except (BrokenPipeError, ConnectionResetError):
-            pass
+        except ConnectionError:
+            # el celular se fue antes de la respuesta (en Windows es ConnectionAborted)
+            self.close_connection = True
 
     def _json(self, dato):
         self._responder(json.dumps(dato))
@@ -288,7 +257,7 @@ class Manejador(BaseHTTPRequestHandler):
             with open(os.path.join(self.estaticos, nombre), "rb") as f:
                 self._responder(f.read(), "text/html; charset=utf-8")
         except OSError:
-            self._responder("No se encontró web/" + nombre,
+            self._responder("No se encontró la página " + nombre,
                             "text/plain; charset=utf-8", 500)
 
     # Sólo nombres simples: minúsculas, números y guion bajo. Así no hay forma
@@ -311,21 +280,20 @@ class Manejador(BaseHTTPRequestHandler):
             self._responder("no encontrado", "text/plain; charset=utf-8", 404)
 
     def log_message(self, formato, *args):
-        # Sin registro por pedido: cada celular conectado hace cinco por
-        # segundo y la consola se volvería ilegible.
+        # Sin registro por pedido: cada celular hace cinco por segundo y la
+        # consola se volvería ilegible.
         pass
 
-    # -- GET ----------------------------------------------------------------
     def do_GET(self):
         u = urlparse(self.path)
         ruta = u.path
         consulta = parse_qs(u.query)
 
-        # -- para mirar: abierto para cualquiera ----------------------------
+        # para mirar: abierto para cualquiera
         if ruta in ("/", "/panel", "/tablero"):
             self._pagina("tablero.html")
 
-        # -- para mandar: hace falta la clave del QR del profesor -----------
+        # para mandar: hace falta la clave del QR del profesor
         elif ruta in ("/mando", "/mando/"):
             clave = (consulta.get("k") or [""])[0]
             if clave and self.acceso:
@@ -363,8 +331,8 @@ class Manejador(BaseHTTPRequestHandler):
                             "image/svg+xml; charset=utf-8")
 
         elif ruta == "/qr_wifi.svg":
-            # Es el mismo dato que está impreso en el cartel pegado al lado
-            # del tablero: la red de los visitantes, no la de la escuela.
+            # el mismo dato del cartel pegado al tablero: la red de los
+            # visitantes, no la de la escuela
             ap = datos_punto_de_acceso()
             wifi = "WIFI:S:%s;T:WPA;P:%s;;" % (ap["red"], ap["clave"])
             self._responder(qr.svg(wifi, 300), "image/svg+xml; charset=utf-8")
@@ -374,8 +342,8 @@ class Manejador(BaseHTTPRequestHandler):
 
         elif ruta in ("/cartel", "/cartel/"):
             ap = datos_punto_de_acceso()
-            # En el cartel va la dirección del punto de acceso: el que lo lee
-            # se acaba de conectar a esa red con el primer código.
+            # en el cartel va la dirección del punto de acceso: el que lo lee ya
+            # se conectó a esa red con el primer código
             url = "http://%s:%d/" % (ap["ip"], self.puerto)
             wifi = "WIFI:S:%s;T:WPA;P:%s;;" % (ap["red"], ap["clave"])
             self._responder(
@@ -400,27 +368,33 @@ class Manejador(BaseHTTPRequestHandler):
         else:
             self._responder("no encontrado", "text/plain; charset=utf-8", 404)
 
-    # -- POST ---------------------------------------------------------------
     def do_POST(self):
         u = urlparse(self.path)
         ruta = u.path
         consulta = parse_qs(u.query)
 
-        largo = int(self.headers.get("Content-Length") or 0)
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            largo = -1
+        if not 0 <= largo <= CUERPO_MAX:
+            self.close_connection = True
+            self._responder("pedido demasiado grande", "text/plain; charset=utf-8", 413)
+            return
         if largo:
             self.rfile.read(largo)
 
         sid = self._sid()
 
-        # -- el mando: pedirlo, cederlo, tomarlo ----------------------------
+        # el mando: pedirlo, cederlo, tomarlo
         if ruta.startswith("/api/mando/"):
             if not self._es_admin():
                 self._prohibido("Hace falta entrar con el QR del profesor.")
                 return
             que = ruta.rsplit("/", 1)[-1]
             if self.acceso is None:
-                # Sin control de acceso (--sin-clave, --banco) el mando es de
-                # todos: no hay turno que pedir ni ceder.
+                # Sin control de acceso (--sin-clave, --banco) el mando es de todos:
+                # no hay turno que pedir ni ceder.
                 self._json({"ok": True, "motivo": ""})
                 return
             if que == "tomar":
@@ -440,7 +414,7 @@ class Manejador(BaseHTTPRequestHandler):
                                 "text/plain; charset=utf-8", 404)
             return
 
-        # -- de acá para abajo, todo es dar órdenes al tablero --------------
+        # de acá para abajo, todo es dar órdenes al tablero
         if self.acceso is not None:
             if not self.acceso.es_admin(sid):
                 self._prohibido("Esta página es para mirar. Para operar el "
@@ -485,12 +459,11 @@ class Manejador(BaseHTTPRequestHandler):
             self._responder("no encontrado", "text/plain; charset=utf-8", 404)
 
 
-# ===========================================================================
 _INDICE = {}
 
 
 def indice_caratulas(estaticos):
-    """{instrumento: {archivo, L, R}} de web/caratulas/indice.json, o {}.
+    """{instrumento: {archivo, L, R}} de static/caratulas/indice.json, o {}.
 
     Si la carpeta no está (una instalación vieja), la página dibuja sus
     esferas de antes: el tablero se ve igual, sólo que no idéntico al físico.

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-test_acceso.py - que el visitante no pueda mandar, y que el mando se ceda
-=========================================================================
+"""Que el visitante no pueda mandar, y que el mando se ceda.
 
-Prueba h08/web/acceso.py sin levantar ningun servidor. Son las reglas que
-deciden quien puede meterle una falla al tablero delante de un curso, asi que
-conviene que esten probadas de verdad y no "se ve que anda".
+Prueba h08/web/acceso.py sin levantar ningún servidor. Son las reglas que
+deciden quien puede meterle una falla al tablero delante de un curso, así que
+conviene que estén probadas de verdad y no "se ve que anda".
 
     python3 -m unittest pruebas.test_acceso -v
 """
@@ -47,7 +45,7 @@ class LaClaveYLasSesiones(Prueba):
         vieja = a.clave
         nueva = a.renovar_clave()
         self.comprobar("renovar da una clave distinta", nueva != vieja)
-        self.comprobar_falso("la sesion vieja ya no vale", a.es_admin(sid))
+        self.comprobar_falso("la sesión vieja ya no vale", a.es_admin(sid))
         self.comprobar_igual("la clave vieja ya no entra", a.entrar(vieja), None)
         self.comprobar("la nueva si", a.entrar(nueva))
 
@@ -93,7 +91,7 @@ class UnSoloMando(Prueba):
         self.comprobar_igual("y con que nombre", e["titular_nombre"], "profesor")
 
         ok, _m = a.tomar_mando(q)
-        self.comprobar_falso("no se lo puede arrebatar sin mas", ok)
+        self.comprobar_falso("no se lo puede arrebatar sin más", ok)
 
         self.comprobar("puede pedirlo", a.pedir_mando(q))
         e = a.estado(p)
@@ -120,7 +118,7 @@ class ElQueSeFue(Prueba):
         q = a.entrar(a.clave, "ayudante")
         self.comprobar("el profesor toma el mando", a.puede_mandar(p))
 
-        # se va: no vuelve a dar senales. Se simula moviendo el reloj hacia atras
+        # se va: no vuelve a dar señales. Se simula moviendo el reloj hacia atras
         # en vez de esperar 45 segundos de verdad.
         a.visto_titular -= acceso.MANDO_ABANDONADO + 1
         self.comprobar("pasado el abandono, el mando se considera libre",
@@ -141,7 +139,7 @@ class ElQueNoContesta(Prueba):
         a.puede_mandar(p)
         a.pedir_mando(q)
         ok, _m = a.tomar_mando(q)
-        self.comprobar_falso("recien pedido, todavia no se lo puede quedar", ok)
+        self.comprobar_falso("recien pedido, todavía no se lo puede quedar", ok)
 
         a.pedido["cuando"] -= acceso.ESPERA_CESION + 1
         e = a.estado(q)
@@ -160,7 +158,7 @@ class LaSesionVence(Prueba):
         sid = a.entrar(a.clave)
         self.comprobar("recien entrado es admin", a.es_admin(sid))
         time.sleep(0.35)
-        self.comprobar_falso("pasada la vida de la sesion, ya no", a.es_admin(sid))
+        self.comprobar_falso("pasada la vida de la sesión, ya no", a.es_admin(sid))
         self.comprobar_falso("y no puede mandar", a.puede_mandar(sid))
 
 

@@ -1,57 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-acceso.py - quién puede mirar, quién puede mandar y quién manda ahora
-======================================================================
+"""Quién puede mirar, quién puede mandar y quién manda ahora.
 
-QUÉ RESUELVE
----------------------------------------------------------------------------
-El tablero se muestra en el taller: hay una pantalla proyectada, un profesor
-con el celular en la mano y veinte alumnos mirando desde el suyo. Todos
-tienen que poder VER el tablero en vivo; ninguno tiene que poder meterle una
-falla por tocar donde no debe.
-
-TRES COSAS DISTINTAS
----------------------------------------------------------------------------
-  1. ENTRAR           cualquiera entra y mira. No hay clave para mirar.
-
-  2. SER ADMIN        hace falta la clave, que viaja adentro del QR del
-                      profesor. Ser admin habilita a mandar.
-
-  3. TENER EL MANDO   un solo dispositivo a la vez. Si el profesor y un
-                      ayudante entran los dos con el QR de admin, los dos son
-                      admin, pero manda uno solo; el otro puede pedirlo.
-
-La tercera existe porque dos personas metiendo fallas distintas al mismo
-tiempo arruinan la demostración.
-
-ALCANCE DE ESTA PROTECCIÓN
----------------------------------------------------------------------------
-Esto no es seguridad informática en sentido estricto. El tablero habla HTTP,
-no HTTPS: la clave viaja en claro la primera vez y la cookie de sesión en
-todos los pedidos. Alguien conectado a la misma red wifi, con herramientas y
-decidido, podría hacerse pasar por el profesor.
-
-Sirve contra lo que hay en un aula o en una muestra:
-  * el alumno que abre la página y toca todo para ver qué pasa;
-  * el que escribe a mano la dirección /api/modo/3 en el navegador;
-  * el visitante que quiere "probar" el tablero.
-
-Se documenta así a propósito: una protección que se cree más fuerte de lo
-que es resulta peor que ninguna, porque se confía en ella.
-
-LA CLAVE
----------------------------------------------------------------------------
-Es un texto aleatorio de 22 caracteres, guardado en un archivo que sólo puede
-leer el usuario que corre el tablero. Se genera sola la primera vez y no
-cambia, salvo que se pida:
-
-    python3 -m h08 --renovar-clave
-
-Al renovarla, el QR anterior deja de servir en el acto.
-
-Ninguna ruta web muestra la clave ni el QR de administrador: se obtienen en
-la terminal de la Raspberry (--qr-admin). Una página que supiera mostrar la
-llave de administrador sería una página a la que se le puede pedir la llave.
+Mirar no tiene clave; mandar sí (la del QR del profesor), y de los admins manda uno
+solo a la vez, porque dos personas metiendo fallas distintas arruinan la
+demostración. No es seguridad informática: el tablero habla HTTP y protege contra el
+alumno curioso, no contra alguien decidido. Está explicado sin adornos en
+docs/acceso.md, junto con el manejo de la clave y de la cookie.
 """
 import json
 import os
@@ -75,7 +29,6 @@ ESPERA_CESION = 30
 LARGO_CLAVE = 22
 
 
-# ===========================================================================
 def _ahora():
     return time.monotonic()
 
@@ -98,7 +51,7 @@ class Acceso:
         self.pedido = None          # {"sid":, "nombre":, "cuando":}
         self.clave = self._leer_o_crear_clave()
 
-    # -- la clave -----------------------------------------------------------
+    # La clave
     def _leer_o_crear_clave(self):
         try:
             with open(self.archivo, encoding="utf-8") as f:
@@ -133,7 +86,7 @@ class Acceso:
             self.pedido = None
             return self.clave
 
-    # -- sesiones -----------------------------------------------------------
+    # Sesiones
     def _limpiar(self):
         """Borra las sesiones vencidas. Se llama con el candado tomado."""
         t = _ahora()
@@ -150,11 +103,12 @@ class Acceso:
         """Canjea la clave por una sesión. Devuelve el identificador, o None.
 
         La comparación es de tiempo constante (compare_digest), para que el
-        tiempo de respuesta no dé pistas sobre la clave.
+        tiempo de respuesta no dé pistas sobre la clave. Va en bytes porque con
+        texto no acepta una tilde: /mando?k=ñ cortaba el pedido con un error.
         """
         if not clave:
             return None
-        if not secrets.compare_digest(str(clave), self.clave):
+        if not secrets.compare_digest(str(clave).encode("utf-8"), self.clave.encode("utf-8")):
             return None
         sid = secrets.token_urlsafe(18)
         with self._candado:
@@ -187,7 +141,7 @@ class Acceso:
             if sid in self.sesiones:
                 self.sesiones[sid]["nombre"] = (nombre or "")[:24]
 
-    # -- el mando -----------------------------------------------------------
+    # El mando
     def _mando_libre(self):
         """Con el candado tomado: si no hay titular o el titular se fue."""
         if self.titular is None:

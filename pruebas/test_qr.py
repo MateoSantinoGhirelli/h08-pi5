@@ -1,37 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
-test_qr.py - que los codigos QR se puedan LEER
-==============================================
-
-No mira el dibujo: lo decodifica. Genera codigos con h08/web/qr.py, los
-rasteriza y se los da a un lector de verdad -el de OpenCV- a ver si sale el
-mismo texto que entro.
+"""Que los códigos QR se puedan LEER.
 
     python3 -m unittest pruebas.test_qr -v
 
-POR QUE ASI Y NO MIRANDO EL DIBUJO
----------------------------------------------------------------------------
-Escribiendo qr.py hubo tres errores, y los tres daban un codigo que a simple
-vista era impecable:
+No mira el dibujo: lo decodifica. Genera los códigos con h08/web/qr.py, los rasteriza
+y se los da a un lector de verdad, el de OpenCV, a ver si sale el mismo texto que
+entró. Escribiendo qr.py aparecieron tres errores que daban códigos impecables a
+simple vista: el polinomio de Reed-Solomon espejado, el bloque de información de
+versión faltante (de la 7 en adelante) y el contador de caracteres fijo en 8 bits,
+que desde la versión 10 son 16. El último es el peor: las versiones 1 a 9 andaban y
+sólo fallaba la 10, la de los textos largos. Por eso se recorren las diez.
 
-  1. el polinomio generador de Reed-Solomon salia espejado, asi que los bytes
-     de correccion de error eran basura;
-  2. faltaba el bloque de informacion de version, que llevan las versiones 7
-     en adelante, y ademas sus 36 casillas quedaban libres y el zigzag de
-     datos las pisaba;
-  3. el contador de caracteres estaba fijo en 8 bits, y desde la version 10
-     son 16.
-
-Ninguno de los tres se ve. El tercero es el peor de todos: las versiones 1 a
-9 andaban perfecto y solo fallaba la 10, que es la que aparece con textos
-largos. Un dia funciona y al otro no, sin que nadie haya tocado nada.
-
-Por eso la prueba recorre las diez versiones y no una sola.
-
-SI OPENCV NO ESTA
----------------------------------------------------------------------------
-La prueba figura como salteada: OpenCV no es una dependencia del tablero, es
-una herramienta de este control. En la Raspberry no hace falta.
+Si OpenCV no está, la prueba figura como salteada: no es una dependencia del tablero,
+es una herramienta de este control y en la Raspberry no hace falta.
 """
 import random
 import string
@@ -62,7 +43,7 @@ def _imagen(matriz, escala=8, borde=4):
 def casos():
     lista = ["http://192.168.1.45:8000/",
              # una URL larga con clave adentro: es la del QR de administrador,
-             # que es el codigo mas cargado que genera el proyecto
+             # que es el código más cargado que genera el proyecto
              "http://10.0.0.7:8000/mando?k=JXUuz0XJvfjplbVW7QOAqA",
              "http://tablero-h08.local:8000/",
              "WIFI:T:WPA;S:Tablero-H08;P:sikorsky55;;",

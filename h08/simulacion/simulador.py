@@ -1,29 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
-simulador.py - orquestador: los tres modos y el lazo de tiempo fijo
-====================================================================
+"""El único módulo que conoce a todos los demás: los tres modos y el lazo de 50 ms.
 
-Es el único módulo que conoce a todos los demás. Su trabajo es:
+Corre el modo activo (vuelo normal por fases, escenario de emergencia o una falla
+puntual), traduce el estado físico a señales del bus -incluida la lógica de las luces
+de alerta, que es de aviso y no física- y publica la telemetría de la página.
 
-  1. Correr el lazo de tiempo fijo (paso constante, sin depender de cuanto
-     tarde la CPU en cada vuelta).
-  2. Ejecutar el modo activo:
-        MODO 1 - VUELO NORMAL   : recorre la máquina de estados de fases
-        MODO 2 - ESCENARIO      : ejecuta un guion cronometrado de emergencia
-        MODO 3 - FALLA PUNTUAL  : vuelo estable con una falla a elección
-  3. Traducir el estado físico a señales del bus (incluida la lógica de
-     luces de alerta, que no es física sino LÓGICA DE AVISO).
-  4. Publicar telemetría para la aplicación web.
-
-EL LAZO DE TIEMPO FIJO
---------------------------------------------------------------------------
-Se calcula cuánto tiempo real pasó y se ejecutan tantos pasos de simulación
-de duración fija como haga falta, con un tope (max_pasos) para que una demora
-del sistema operativo no dispare una avalancha de pasos seguidos.
-
-Ventajas: la física es reproducible y estable, la simulación no se acelera
-en una máquina rápida ni se frena en una lenta, y las tres tasas del sistema
-(física, salida al hardware, telemetría) quedan desacopladas.
+El lazo es de tiempo fijo: se mira cuánto tiempo real pasó y se dan tantos pasos de
+duración fija como haga falta, con un tope para que una demora del sistema operativo
+no dispare una avalancha. Así la física es reproducible, no se acelera en una máquina
+rápida ni se frena en una lenta, y las tres tasas (física, salida al hardware y
+telemetría) quedan desacopladas.
 """
 
 from h08.util import ticks_ms, ticks_diff, limitar
@@ -37,7 +23,7 @@ from h08.simulacion.fallas import MotorFallas, CATALOGO, CATALOGO_POR_ID
 from h08.simulacion.escenarios import PERFIL_NORMAL, ESCENARIOS, ESCENARIOS_POR_ID
 from h08.hardware.mapa import MapaTablero
 
-# --- Modos -----------------------------------------------------------------
+# Modos
 MODO_NORMAL = 1
 MODO_ESCENARIO = 2
 MODO_FALLA = 3
@@ -86,9 +72,7 @@ class Simulador:
         self._t_salida = 0.0
         self.per_salida = 1.0 / LAZO["hz_salida"]
 
-    # =======================================================================
-    # CONTROL DE MODOS
-    # =======================================================================
+    # Control de modos
     # Fases a las que no se puede llegar con la aeronave fría: si el docente
     # salta directamente a una de ellas desde la página, se deja el motor en
     # marcha y el rotor girando. Si no, el tablero quedaría en cero mostrando
@@ -210,7 +194,7 @@ class Simulador:
         self.piloto._i_ias = 0.0
         self.modelo.ctl.luces_tablero = 0.7
 
-    # -- acciones manuales desde la página ----------------------------------
+    # Acciones manuales desde la página
     def activar_falla(self, id_falla):
         return self.fallas.activar(id_falla)
 
@@ -224,9 +208,7 @@ class Simulador:
         """Permite mostrar qué pasa si NADIE reacciona a la falla."""
         self.piloto.reacciona_a_fallas = bool(valor)
 
-    # =======================================================================
-    # LAZO PRINCIPAL
-    # =======================================================================
+    # Lazo principal
     def servicio(self):
         """
         Llamar lo más seguido posible. Ejecuta los pasos de física que
@@ -238,7 +220,9 @@ class Simulador:
         self._t_ultimo = ahora
         if transcurrido < 0:
             transcurrido = 0
-        self._acum_ms += int(transcurrido * self.velocidad)
+        # Sin truncar: cada vuelta dura unos 5 ms y a 0,5x int() perdía medio
+        # milisegundo por vuelta, así que la cámara lenta iba 10 a 20 % más lenta.
+        self._acum_ms += transcurrido * self.velocidad
 
         paso_ms = int(self.dt * 1000)
         max_pasos = 5                 # tope anti-avalancha
@@ -254,7 +238,7 @@ class Simulador:
         if n == 0:
             return False
 
-        # --- salida al hardware ---
+        # Salida al hardware
         self._t_salida += n * self.dt
         if self._t_salida >= self.per_salida:
             self._t_salida = 0.0
@@ -297,9 +281,7 @@ class Simulador:
         # 7. Indicadas -> ángulos de actuador
         self.mapa.actualizar(self.bus, dt)
 
-    # =======================================================================
-    # MODO 1: MÁQUINA DE ESTADOS DE FASES
-    # =======================================================================
+    # Modo 1: máquina de estados de fases
     def _entrar_fase(self):
         f = PERFIL_NORMAL[self.fase_idx]
         ctl = self.modelo.ctl
@@ -351,9 +333,7 @@ class Simulador:
                     return
             self._entrar_fase()
 
-    # =======================================================================
-    # MODO 2: GUION DE ESCENARIO
-    # =======================================================================
+    # Modo 2: guion de escenario
     def _paso_escenario(self, dt):
         self.escenario_t += dt
         guion = self.escenario["guion"]
@@ -393,14 +373,12 @@ class Simulador:
             self._msg("--- Escenario finalizado ---")
             self.modo = MODO_DETENIDO
 
-    # =======================================================================
-    # FÍSICA -> BUS DE SEÑALES  (incluye la lógica de luces de alerta)
-    # =======================================================================
+    # Física -> bus de señales (incluye la lógica de luces de alerta)
     def _publicar_senales(self):
         m = self.modelo
         p = self.bus.poner
 
-        # --- Vuelo -----------------------------------------------------------
+        # Vuelo
         # Lo que muestra el velocímetro no es la velocidad real: es la que
         # deduce el instrumento de la diferencia pitot-estática. Con la toma
         # estática tapada las dos dejan de coincidir.
@@ -420,7 +398,7 @@ class Simulador:
         p("slip", m.slip)
         p("cdi", m.cdi)
 
-        # --- Motor y rotor ----------------------------------------------------
+        # Motor y rotor
         p("n_eng_rpm", m.n_eng_rpm)
         p("n_rot_rpm", m.n_rot_rpm)
         p("map_inhg", m.map_inhg)
@@ -430,23 +408,19 @@ class Simulador:
         p("cat_c", m.cat_c)
         p("fuel_p_psi", m.fuel_p_psi)
 
-        # --- Combustible y transmisión ----------------------------------------
+        # Combustible y transmisión
         p("fuel_fwd_l", m.fuel_fwd_l)
         p("fuel_aft_l", m.fuel_aft_l)
         p("xmsn_p_psi", m.xmsn_p_psi)
         p("xmsn_t_c", m.xmsn_t_c)
 
-        # --- Eléctrico ---------------------------------------------------------
+        # Eléctrico
         p("bus_v", m.bus_v)
         p("amp_a", m.amp_a)
 
-        # =====================================================================
-        # LÓGICA DE LUCES DE ALERTA
-        # ---------------------------------------------------------------------
-        # No es física: es lógica de aviso, con sus umbrales. Las luces son
-        # eléctricas: si la barra cae por debajo de 20 V se apagan todas,
-        # aunque la condición de alarma siga presente.
-        # =====================================================================
+        # Las luces son lógica de aviso con sus umbrales, no física. Y son
+        # eléctricas: con la barra por debajo de 20 V se apagan todas, aunque la
+        # condición de alarma siga.
         vivo = 1.0 if m.energia_ok else 0.0
 
         p("lt_fuel_fwd", vivo if m.fuel_fwd_l < LIM["aviso_fuel_l"] else 0.0)
@@ -463,9 +437,7 @@ class Simulador:
 
         p("lt_starter", vivo if m.ctl.magnetos != MAG_OFF else 0.0)
 
-    # =======================================================================
-    # TELEMETRÍA PARA LA PÁGINA WEB
-    # =======================================================================
+    # Telemetría para la página web
     def _msg(self, texto):
         self.mensajes.append({"t": round(self.t_sim, 1), "texto": texto})
         if len(self.mensajes) > 40:
@@ -538,9 +510,7 @@ class Simulador:
             d["instrumentos"] = inst
         return d
 
-    # =======================================================================
-    # DESCRIPCIÓN ESTÁTICA (se envía una sola vez a la página)
-    # =======================================================================
+    # Descripción estática (se envía una sola vez a la página)
     def catalogo_estatico(self):
         instrumentos = []
         # El reloj es mecánico: no tiene canal ni actuador, pero ocupa un
@@ -553,7 +523,7 @@ class Simulador:
                 "arcos": it.get("arcos", []),
                 "tipo": it["actuador"], "color": it.get("color", ""),
                 "canal": it.get("canal"),
-                # --- datos para el panel visual de cabina ---
+                # Datos para el panel visual de cabina
                 "desc": it.get("desc", ""),
                 "zona": it.get("zona", ""),
                 "dial": it.get("dial", ""),
@@ -566,7 +536,7 @@ class Simulador:
                 "cal": it.get("cal", []),
                 # Cuánto barre la aguja y dónde va el medio de la escala: con
                 # esto la página pone la aguja sobre la carátula impresa en el
-                # mismo ángulo que la pone el servo (ver caratulas.ang_dibujo).
+                # mismo ángulo que la pone el servo (la cuenta, en docs/mecanica.md).
                 "barrido": BARRIDO.get(it["id"]),
                 "centro": CENTRO_ESCALA.get(it["id"], 90.0),
             })

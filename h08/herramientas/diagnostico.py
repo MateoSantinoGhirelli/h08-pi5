@@ -1,27 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 diagnostico - revisión de conexiones y de la instalación
-=======================================================================
+"""Revisión de conexiones y de la instalación; no mueve nada.
 
-    python3 -m h08 diagnostico              revisa todo (no mueve nada)
+    python3 -m h08 diagnostico              revisa todo
     python3 -m h08 diagnostico --cableado   la tabla de cables Raspberry -> placa
-    python3 -m h08 diagnostico --guardar    además deja informes/diagnostico_FECHA.txt
+    python3 -m h08 diagnostico --guardar    además deja un informe en datos/informes/
 
-Revisa, en orden, todo lo que tiene que estar bien para que el tablero ande,
-y para cada cosa que falla dice el comando que la arregla:
-
-  1. sistema        placa, Raspberry Pi OS con escritorio, Python, versión
-  2. alimentación   baja tensión ahora y desde el arranque, 5 V medidos
-  3. I2C            bus, velocidad, permisos, qué hay conectado en el bus y
-                    si cada PCA9685 está configurado a 50 Hz
-  4. motor          gpiozero/lgpio, permisos, pines libres
-  5. servicio       andando, arranca solo, la página contesta, errores del
-                    bus y reinicios de las placas desde que arrancó
-  6. pantalla       escritorio que entra solo, Chromium, kiosco al encender
-  7. wifi propia    red Tablero-H08 preparada y levantada
-  8. archivos       clave, calibración, posición del motor, carátulas
-
-No cambia nada. Se puede correr con el servicio andando.
+Revisa en orden sistema, alimentación, I2C y placas, motor, servicio, pantalla, wifi
+propia y archivos, y para cada cosa que falla dice el comando que la arregla. Se
+puede correr con el servicio andando.
 """
 
 import argparse
@@ -34,7 +20,7 @@ import sys
 import urllib.request
 
 from h08 import rutas
-from h08.config import PLACAS, MOTORES, I2C_BUS
+from h08.config import PLACAS, MOTORES, I2C_BUS, SERVO_CFG
 from h08.herramientas import banco
 
 AUTOSTART = os.path.expanduser("~/.config/autostart/tablero-kiosco.desktop")
@@ -147,13 +133,11 @@ def http_json(ruta, t=3):
         return None
 
 
-# ===========================================================================
 def revisar(eco=True):
     R = Revision(eco)
     soy_root = getattr(os, "geteuid", lambda: -1)() == 0
     g = grupos()
 
-    # 1 ---------------------------------------------------------------------
     R.titulo("1. SISTEMA")
     modelo = leer("/proc/device-tree/model")
     R.decir("Raspberry Pi 5" in modelo, "Placa: %s" % (modelo or "desconocida"),
@@ -172,7 +156,6 @@ def revisar(eco=True):
     version = leer(rutas.VERSION).splitlines()
     R.dato("versión instalada: %s" % (version[0] if version else "sin VERSION.txt"))
 
-    # 2 ---------------------------------------------------------------------
     R.titulo("2. ALIMENTACIÓN DE LA RASPBERRY")
     t = correr(["vcgencmd", "get_throttled"])
     if t.startswith("throttled="):
@@ -192,7 +175,6 @@ def revisar(eco=True):
         R.decir(v5 >= 4.85, "5 V de entrada de la Pi: %.2f V" % v5,
                 "por debajo de 4,85 V: fuente o cable flojos")
 
-    # 3 ---------------------------------------------------------------------
     R.titulo("3. BUS I2C Y PLACAS PCA9685")
     dev = "/dev/i2c-%d" % I2C_BUS
     hay = os.path.exists(dev)
@@ -206,7 +188,9 @@ def revisar(eco=True):
     servicio = banco.servicio_andando()
     if hay:
         try:
-            from h08.hardware.pca9685 import BusI2C, MODE1, MODE2, PRESCALE
+            from h08.hardware.pca9685 import BusI2C, PCA9685, MODE1, MODE2, PRESCALE
+            # el mismo prescaler que escribe el servicio (121 para 50 Hz)
+            pre_esperado = PCA9685(None, 0, SERVO_CFG["frecuencia_hz"]).prescale
             bus = BusI2C()
             encontrados = [d for d in range(0x03, 0x78) if bus.responde(d)]
             R.dato("en el bus hay: " + (", ".join("0x%02X" % d for d in encontrados) or "nada"))
@@ -222,8 +206,9 @@ def revisar(eco=True):
                         m1 = bus.leer(direccion, MODE1, 1)[0]
                         m2 = bus.leer(direccion, MODE2, 1)[0]
                         pre = bus.leer(direccion, PRESCALE, 1)[0]
-                        R.decir(pre == 121 and (m2 & 0x04) and not (m1 & 0x10),
-                                "%s configurada: 50 Hz, salida totem-pole, despierta" % nombre,
+                        R.decir(pre == pre_esperado and (m2 & 0x04) and not (m1 & 0x10),
+                                "%s configurada: %d Hz, salida totem-pole, despierta"
+                                % (nombre, SERVO_CFG["frecuencia_hz"]),
                                 "el servicio no la pudo configurar: ver journalctl -u %s" % banco.SERVICIO)
                     except OSError:
                         pass
@@ -238,7 +223,6 @@ def revisar(eco=True):
         except RuntimeError as e:
             R.decir(False, "Abrir el bus I2C", str(e).splitlines()[-1].strip())
 
-    # 4 ---------------------------------------------------------------------
     R.titulo("4. MOTOR PASO A PASO (GPIO)")
     try:
         import gpiozero                                   # noqa: F401
@@ -266,14 +250,13 @@ def revisar(eco=True):
                     except Exception:
                         ocupados.append(p)
             R.decir(not ocupados, "Pines del motor libres",
-                    "GPIO ocupados %s: otro programa los usa (¿quedó abierto probar_motor.py?)"
+                    "GPIO ocupados %s: otro programa los usa (¿quedó abierto python3 -m h08 motor?)"
                     % ocupados)
         except ImportError:
             pass
     else:
         R.dato("(pines no revisados: los está usando el servicio, que es lo normal)")
 
-    # 5 ---------------------------------------------------------------------
     R.titulo("5. SERVICIO DEL TABLERO")
     R.decir(servicio, "Servicio %s andando" % banco.SERVICIO,
             "sudo systemctl start %s   (errores: journalctl -u %s -n 50)"
@@ -303,7 +286,6 @@ def revisar(eco=True):
                 "Errores del programa: %d" % hw.get("errores_programa", 0),
                 "journalctl -u %s -n 100" % banco.SERVICIO)
 
-    # 6 ---------------------------------------------------------------------
     R.titulo("6. PANTALLA DE LA RASPBERRY (KIOSCO)")
     nav = [n for n in ("chromium", "chromium-browser") if correr(["which", n])]
     R.decir(bool(nav), "Chromium instalado", "sudo apt install -y chromium")
@@ -317,7 +299,6 @@ def revisar(eco=True):
     kiosco = correr(["pgrep", "-f", "tablero-kiosco"])
     R.dato("kiosco abierto ahora: %s" % ("sí" if kiosco else "no (normal si se entró por SSH)"))
 
-    # 7 ---------------------------------------------------------------------
     R.titulo("7. RED WIFI PROPIA")
     if correr(["which", "nmcli"]):
         conex = correr(["nmcli", "-t", "-f", "NAME", "connection", "show"]).splitlines()
@@ -337,7 +318,6 @@ def revisar(eco=True):
         R.decir(False, "NetworkManager (nmcli)", "hace falta Raspberry Pi OS Bookworm o posterior")
     R.dato("direcciones: %s" % (correr(["hostname", "-I"]) or "ninguna"))
 
-    # 8 ---------------------------------------------------------------------
     R.titulo("8. ARCHIVOS")
     R.decir(os.access(rutas.DATOS, os.W_OK), "Se puede escribir en la carpeta de datos (%s)" % rutas.DATOS,
             "la clave, la calibración y la posición del motor se guardan ahí; si no existe, "

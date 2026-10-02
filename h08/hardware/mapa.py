@@ -1,36 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-h08/hardware/mapa.py - del valor de ingeniería al actuador físico
-=============================================================
+"""La frontera entre «qué está haciendo el helicóptero» y «cuánto mover el servo 7».
 
-Es la frontera entre "lo que el helicóptero está haciendo" y "cuánto hay que
-mover el servo del canal 7 de la placa 0". Hace cuatro cosas, en orden:
-
-  1. CALIBRACIÓN
-     Convierte el valor indicado (psi, kt, RPM, °C) en un ángulo de actuador
-     con la tabla a trozos de h08.config.TABLERO. Es lo único que hay que
-     tocar cuando la aguja no cae justo en la marca.
-
-  2. DINÁMICA DE AGUJA
-     Aplica inercia (tau) y límite de velocidad (slew). Una aguja real tiene
-     masa: sin esto un servo saltaría de 0 a 180 grados en un ciclo, con un
-     pico de corriente y un movimiento que se ve falso.
-
-  3. BANDA MUERTA
-     No escribe al hardware si el cambio es menor que un umbral. En crucero
-     estabilizado la mayoría de los canales no cambian, y el tráfico por el
-     bus I2C baja a una fracción.
-
-  4. DESPACHO
-     Llama al método que corresponde según el tipo de actuador (servo, luz o
-     paso a paso), sin saber qué placa hay abajo.
-
-ARRANQUE ESCALONADO
-     En la primera escritura todos los canales están "sin escribir", así que
-     los veintidós servos arrancarían en el mismo ciclo. Un servo pide unos
-     700 mA mientras arranca: veintidós juntos superan cualquier fuente del
-     tablero y los PCA9685 se reiniciarían por baja tensión. Por eso los
-     canales se liberan de a tandas chicas (h08.config.ARRANQUE).
+De cada valor indicado (psi, kt, RPM, °C) saca el ángulo del actuador con la tabla
+cal, le da inercia y límite de velocidad para que la aguja no salte, y escribe sólo
+lo que cambió más que la banda muerta. No sabe qué placa hay abajo: despacha al
+método que corresponde según el tipo de actuador.
 """
 
 from h08.util import aproximar, rampa, interpolar_tabla
@@ -55,17 +29,12 @@ class Canal:
         self.slew = d.get("slew", 180.0)
         self.destino = d.get("canal")
         self.activo = self.destino is not None
-        # De ángulo de la tabla a ángulo del actuador. La tabla de calibración
-        # está escrita como si la esfera midiera 180 grados; este factor la
-        # lleva al recorrido que hace el servo. Con barrido de 270 o 300 el
-        # factor es 1 y el resto lo hacen los engranajes; con barrido de 120
-        # el factor es 0,667 y el servo usa dos tercios de su recorrido.
+        # de ángulo de la tabla (escrita en 0..180) al recorrido real del servo
         self.factor = factor_servo(self.id)
-        # Giro continuo (altímetro de centenas y brújula): el ángulo vive en
-        # 0..360 y los cambios se miden por el camino corto.
+        # Giro continuo (brújula, centenas del altímetro): el ángulo vive en 0..360
+        # y los cambios se miden por el camino corto.
         self.circular = BARRIDO.get(self.id) == "CONT"
-        # Se arranca en el ángulo del mínimo de escala
-        self.ang = self.cal[0][1]
+        self.ang = self.cal[0][1]          # arranca en el mínimo de escala
         self.ang_escrito = -9999.0
 
 
@@ -86,9 +55,8 @@ class MapaTablero:
             self.canales.append(c)
             self.por_id[c.id] = c
 
-        # Banda muerta en grados, a partir de la resolución del PCA9685:
-        # 4096 cuentas son 20 ms, y un servo usa 500..2500 us, o sea unas 410
-        # cuentas para 180 grados.
+        # La banda muerta viene en cuentas del PCA9685 y acá se pasa a grados: 4096
+        # cuentas son 20 ms y un servo usa 500..2500 us, o sea 410 cuentas para 180°.
         cuentas = LAZO["banda_muerta"]
         self.banda_deg = max(0.15, 180.0 * cuentas / 410.0)
 
@@ -96,9 +64,12 @@ class MapaTablero:
         self.arranque_paso = ARRANQUE["segundos_entre_tandas"]
         self._encolar_arranque()
 
-    # -- arranque escalonado --------------------------------------------------
     def _encolar_arranque(self):
-        """Arma la cola del arranque: primero lo que casi no consume."""
+        """Arma la cola del arranque escalonado: primero lo que casi no consume.
+
+        En la primera escritura ningún canal tiene ángulo escrito y arrancarían los
+        20 servos juntos, a 700 mA cada uno (ver ARRANQUE en h08/config/hardware.py).
+        """
         def peso(c):
             # luces y paso a paso primero (miliamperes), servos después
             return (0 if c.tipo in (LED, MOTOR) else 1,
@@ -116,7 +87,6 @@ class MapaTablero:
                 self._sueltos.add(id(self._cola.pop(0)))
             self._prox_tanda = self._t + self.arranque_paso
 
-    # =======================================================================
     def actualizar(self, bus, dt):
         """Calcula el ángulo objetivo de cada canal y lo mueve con inercia."""
         self._t += dt
@@ -124,13 +94,10 @@ class MapaTablero:
             valor = bus.ver(c.senal, 0.0)
 
             if c.tipo == LED:
-                # Las luces no tienen inercia. La prueba de lámparas las
-                # enciende todas: es una función real de cabina y sirve para
-                # verificar el cableado antes de una clase.
+                # sin inercia; la prueba de lámparas manda sobre la señal
                 c.ang = 1.0 if (self.test_luces or valor >= 0.5) else 0.0
                 continue
 
-            # Instrumentos de aguja: calibración + inercia + límite de velocidad
             objetivo = interpolar_tabla(valor, c.cal)
             if c.circular:
                 objetivo = c.ang + envolver(objetivo - c.ang, 360.0)
@@ -139,9 +106,12 @@ class MapaTablero:
             if c.circular:
                 c.ang %= 360.0
 
-    # =======================================================================
     def escribir(self):
-        """Vuelca al hardware sólo los canales que cambiaron."""
+        """Vuelca al hardware sólo los canales que cambiaron.
+
+        En crucero estabilizado casi ninguno cambia, y el tráfico del bus I2C baja a
+        una fracción (lo mide estadisticas()).
+        """
         actuadores = self.actuadores
         self._soltar_tanda()
         for c in self.canales:
@@ -159,8 +129,8 @@ class MapaTablero:
                     self._omitidas += 1
                 continue
 
-            # La banda muerta se mide sobre el ángulo que va al actuador, no
-            # sobre el de la tabla: es el actuador el que se quiere ahorrar.
+            # sobre el ángulo que va al actuador, no sobre el de la tabla: es la
+            # escritura al actuador la que se quiere ahorrar
             objetivo = c.ang * c.factor
             cambio = objetivo - c.ang_escrito
             if c.circular and c.ang_escrito > -1000.0:
@@ -177,7 +147,6 @@ class MapaTablero:
 
         actuadores.refrescar()
 
-    # =======================================================================
     def estadisticas(self):
         total = self._escrituras + self._omitidas
         ahorro = 0.0 if total == 0 else 100.0 * self._omitidas / total

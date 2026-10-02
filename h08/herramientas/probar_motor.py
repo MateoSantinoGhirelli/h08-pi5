@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 motor - puesta en marcha del motor paso a paso de la brújula
-===========================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Puesta en marcha del motor paso a paso de la brújula.
 
 Motor 1 = aguja de la brújula (la rosa va pegada, fija)   GPIO 12, 16, 20, 21
 (el lugar del motor 0, GPIO 6, 13, 19, 26, queda libre en la placa madre)
@@ -21,13 +17,10 @@ Con el servicio detenido (sudo systemctl stop tablero-h08):
     python3 -m h08 motor 1 --vueltas 10        diez vueltas y vuelve: la aguja
                                                tiene que quedar donde estaba
 
-SI GIRA AL REVÉS: cambiar el 'sentido' de ese motor en MOTORES (h08/config/hardware.py)
-(+1 por -1 o al revés). No hace falta tocar cables.
-
-SI TIEMBLA Y NO GIRA: los cables IN1..IN4 están cruzados. Con --bobinas los
-LED de la plaquita tienen que prender A, B, C, D en ese orden.
-
-Al terminar, las agujas vuelven a su cero y la posición queda guardada.
+Si gira al revés, se cambia el 'sentido' de ese motor en MOTORES
+(h08/config/hardware.py), sin tocar cables. Si tiembla y no gira, los cables IN1..IN4
+están cruzados: con --bobinas los LED de la plaquita tienen que prender en orden A,
+B, C, D. Al terminar, la aguja vuelve a su cero y la posición queda guardada.
 """
 
 import argparse

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-test_vuelo.py - el simulador completo, sin hardware
-===================================================
+"""El simulador completo, sin hardware.
 
     python3 -m unittest pruebas.test_vuelo -v
 
@@ -17,6 +15,7 @@ import unittest
 from h08.util import interpolar_tabla
 from h08.config import TABLERO, TABLERO_POR_ID
 from h08.hardware.simulado import ActuadoresSimulados
+from h08.simulacion import simulador
 from h08.simulacion.simulador import Simulador, MODO_DETENIDO
 from h08.simulacion.fallas import CATALOGO
 from h08.simulacion.escenarios import ESCENARIOS, PERFIL_NORMAL
@@ -120,6 +119,30 @@ class ElRendimiento(Prueba):
             sim.paso(DT)
         us = (time.perf_counter() - t0) / n * 1e6
         self.assertLess(us, 50000.0, "%.0f us por paso" % us)
+
+
+class LaVelocidad(Prueba):
+
+    def test_la_camara_lenta_es_exacta(self):
+        """A 0,5x, 1x y 4x el tiempo simulado avanza justo eso, con vueltas de 5 ms."""
+        reloj = [0]
+
+        def ticks_falso():
+            reloj[0] += 5                  # una vuelta del hilo, como en la Pi
+            return reloj[0]
+
+        original = simulador.ticks_ms
+        simulador.ticks_ms = ticks_falso
+        try:
+            for v in (0.5, 1.0, 4.0):
+                sim = Simulador(ActuadoresSimulados(), semilla=1)
+                sim.velocidad = v
+                for _ in range(2000):      # 10 s reales
+                    sim.servicio()
+                self.comprobar("a %.1fx, 10 s reales son %.1f s simulados (dio %.2f)"
+                               % (v, 10 * v, sim.t_sim), abs(sim.t_sim - 10 * v) <= 0.1)
+        finally:
+            simulador.ticks_ms = original
 
 
 if __name__ == "__main__":

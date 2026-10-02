@@ -1,29 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-escenarios.py - perfil de vuelo normal y guiones de emergencia
-===============================================================
+"""El perfil de vuelo normal y los guiones de emergencia.
 
-Contiene DOS cosas distintas:
+PERFIL_NORMAL es la máquina de estados del vuelo completo: cada fase fija las llaves
+y le da objetivos al piloto virtual, y se pasa a la siguiente por tiempo o por
+condición física, nunca «poniendo la aguja donde corresponde». ESCENARIOS son guiones
+cronometrados: listas de (segundo, acción) que activan fallas del catálogo, cambian
+el ambiente o le muestran un mensaje al alumno.
 
-  A) PERFIL_NORMAL : la máquina de estados del vuelo completo (Modo 1).
-     Cada fase fija las llaves y le da objetivos al piloto virtual.
-     Las transiciones son por TIEMPO o por CONDICIÓN FÍSICA, nunca por
-     "poner la aguja donde corresponde".
-
-  B) ESCENARIOS    : guiones cronometrados de emergencia (Modo 2).
-     Un guion es una lista de (segundo, acción). Las acciones activan fallas
-     del catálogo, cambian el ambiente o muestran mensajes al alumno.
-
-Ninguno de los dos toca un instrumento. Ambos actúan sobre los MANDOS y
-sobre la SALUD de los sistemas; las agujas son consecuencia.
+Ninguno de los dos toca un instrumento: actúan sobre los mandos y sobre la salud de
+los sistemas, y las agujas son consecuencia.
 """
 
 from h08.simulacion.modelo import MAG_OFF, MAG_L, MAG_R, MAG_BOTH
 from h08.simulacion.modelo import TANQUE_FWD, TANQUE_AFT, TANQUE_AMBOS
 
-# ===========================================================================
-# A) PERFIL DE VUELO NORMAL  (MODO 1)
-# ===========================================================================
+# A) Perfil de vuelo normal (modo 1)
 # Campos de cada fase:
 #   id, nombre   identificación
 #   dur          duración máxima en segundos
@@ -32,7 +23,6 @@ from h08.simulacion.modelo import TANQUE_FWD, TANQUE_AFT, TANQUE_AMBOS
 #   piloto       True si el piloto virtual controla altitud/velocidad
 #   obj          objetivos del piloto (alt_ft, ias_kt, hdg_deg, rpm)
 #   texto        explicación que se muestra en la página web
-# ===========================================================================
 
 PERFIL_NORMAL = [
     {
@@ -68,15 +58,15 @@ PERFIL_NORMAL = [
         "ctl": {"bateria": True, "bomba_combustible": True, "luces_tablero": 0.75,
                 "magnetos": MAG_BOTH, "arrancador": True, "throttle": 0.14},
         "piloto": False, "obj": None,
-        "texto": "Mirar el TACOMETRO: primero el arrancador ARRASTRA el motor "
-                 "a unas 200 RPM, y recien despues el motor PRENDE y acelera "
+        "texto": "Mirar el TACÓMETRO: primero el arrancador ARRASTRA el motor "
+                 "a unas 200 RPM, y recién después el motor PRENDE y acelera "
                  "solo. Mientras arrastra, el amperimetro se va al tope de "
                  "descarga y la barra se hunde a 18 V: los aforadores y las "
-                 "temperaturas marcan de menos porque son electricos, pero el "
+                 "temperaturas marcan de menos porque son eléctricos, pero el "
                  "tacometro y el manometro de aceite siguen bien porque no "
-                 "dependen de la barra. Y la presion de admision BAJA de 30 a "
-                 "16: con el motor parado marcaba la presion atmosferica. Al "
-                 "prender, la presion de aceite debe subir en menos de 30 "
+                 "dependen de la barra. Y la presión de admisión BAJA de 30 a "
+                 "16: con el motor parado marcaba la presión atmosférica. Al "
+                 "prender, la presión de aceite debe subir en menos de 30 "
                  "segundos o se corta el motor.",
     },
     {
@@ -97,7 +87,7 @@ PERFIL_NORMAL = [
         "texto": "Se acopla el embrague: la aguja de ROTOR sube hasta alcanzar "
                  "a la de MOTOR. Cuando ambas quedan SUPERPUESTAS, la relación "
                  "10:1 está establecida. La presión de aceite de transmisión "
-                 "aparece recien ahora, porque su bomba la mueve el rotor.",
+                 "aparece recién ahora, porque su bomba la mueve el rotor.",
     },
     {
         "id": "RUNUP", "nombre": "Prueba de motor (run-up)", "dur": 30.0, "hasta": None,
@@ -248,9 +238,7 @@ for _f in PERFIL_NORMAL:
     PERFIL_POR_ID[_f["id"]] = _f
 
 
-# ===========================================================================
-# B) ESCENARIOS DE EMERGENCIA  (MODO 2)
-# ===========================================================================
+# B) Escenarios de emergencia (modo 2)
 # Un guion es una lista de (segundo, acción). Acciones posibles:
 #   {"falla": "ID"}          activa una falla del catálogo
 #   {"quitar": "ID"}         la desactiva
@@ -260,7 +248,6 @@ for _f in PERFIL_NORMAL:
 #   {"ctl": {...}}           acciona un mando (ej: calefacción de carburador)
 #   {"msg": "texto"}         mensaje didáctico en la app
 #   {"fin": True}            termina el escenario
-# ===========================================================================
 
 ESCENARIOS = [
     {
@@ -317,7 +304,7 @@ ESCENARIOS = [
                    "realmente ocurre -el DESCENSO- y con el final que la hace "
                    "peligrosa: el tablero se ve normal hasta que se pide "
                    "potencia y no está.",
-        # POR QUÉ ESTE ESCENARIO SE VUELA EN DESCENSO Y NO EN CRUCERO
+        # Por qué este escenario se vuela en descenso y no en crucero
         # La depresión del venturi es máxima con la mariposa casi cerrada, así
         # que el hielo se forma mucho más rápido a baja potencia. Y, sobre
         # todo, en crucero el gobernador tiene margen de sobra: va abriendo

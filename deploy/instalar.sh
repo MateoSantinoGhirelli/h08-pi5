@@ -1,20 +1,16 @@
 #!/usr/bin/env bash
-# ===========================================================================
-#  instalar.sh - deja la Raspberry Pi 5 lista para el tablero H-08
-# ===========================================================================
-#  Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-#  EEST N° 7 - Taller Regional Quilmes
+# instalar.sh - deja la Raspberry Pi 5 lista para el tablero H-08
 #
-#  Se corre UNA vez, con el usuario normal (no con sudo delante), en
-#  Raspberry Pi OS CON ESCRITORIO (Bookworm o posterior, 64 bits), desde la
-#  carpeta del programa (~/H08_Pi5):
+# Se corre UNA vez, con el usuario normal (no con sudo delante), en
+# Raspberry Pi OS CON ESCRITORIO (Bookworm o posterior, 64 bits), desde la
+# carpeta del programa (~/H08_Pi5):
 #
 #      bash deploy/instalar.sh                  todo
 #      bash deploy/instalar.sh --sin-kiosco     sin abrir el tablero en la pantalla
 #      bash deploy/instalar.sh --sin-wifi       sin la red wifi propia
 #      bash deploy/instalar.sh --quitar-kiosco  deja de abrirse solo en la pantalla
 #
-#  Hace esto:
+# Hace esto:
 #    0. limpia lo que dejó la versión anterior: detiene el servicio viejo y
 #       borra el arranque del kiosco que apuntaba a raspberry_pi5/kiosco.sh;
 #    1. instala los paquetes del sistema (gpiozero, lgpio, i2c-tools,
@@ -29,9 +25,8 @@
 #    7. WIFI: la Raspberry levanta su propia red (Tablero-H08) al encender,
 #       para que el público entre desde el celular con el QR.
 #
-#  No usa entorno virtual ni pip: todo lo que hace falta viene del sistema.
-#  Al terminar hay que REINICIAR una vez.
-# ===========================================================================
+# No usa entorno virtual ni pip: todo lo que hace falta viene del sistema.
+# Al terminar hay que REINICIAR una vez.
 set -e
 
 DEPLOY="$(cd "$(dirname "$0")" && pwd)"        # .../H08_Pi5/deploy

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-test_hardware.py - la capa de hardware, probada sin hardware
-============================================================
+"""La capa de hardware, probada sin hardware.
 
     python3 -m unittest pruebas.test_hardware -v
 
@@ -387,9 +385,10 @@ class LosMotoresPasoAPaso(Prueba):
         correr_motor(m2, 2.0)
         self.comprobar("sentido -1: las fases giran al revés", r2.pasos == -round(ppv / 8), r2.pasos)
 
-        # Gestor completo, con hilo y archivo de posición.
+        # Gestor completo, con hilo y archivo de posición, en una carpeta de datos que
+        # todavía no existe (un banco donde el tablero nunca arrancó).
         tmp = tempfile.mkdtemp()
-        arch = os.path.join(tmp, "pos.json")
+        arch = os.path.join(tmp, "datos_nuevos", "pos.json")
         r3 = RotoresFalsos()
         g = M.GestorMotores(r3, arch, motores=MOTORES_PRUEBA)
         g.start()
@@ -415,6 +414,50 @@ class LosMotoresPasoAPaso(Prueba):
         g3 = M.GestorMotores(RotorFalso(), arch, motores=MOTORES_PRUEBA)
         self.comprobar("archivo dañado: arranca en cero sin romperse",
                        g3.motores[0].grados() == 0)
+
+
+class ProbarCanalConLaBrujula(Prueba):
+
+    def test_la_brujula_no_es_un_servo(self):
+        """canal COMPASS avisa que es el paso a paso en vez de «mover» un servo que no está."""
+        import contextlib
+        import io
+        from h08.herramientas import banco, probar_canal
+        from h08.hardware.simulado import ActuadoresSimulados
+
+        class Placas(ActuadoresSimulados):
+            faltantes, placas, errores, ultimo_error = [], {"PCA0": 1, "PCA1": 1}, 0, ""
+
+        placas = Placas()
+        originales = banco.exigir_servicio_detenido, banco.abrir_placas
+        banco.exigir_servicio_detenido = lambda: None
+        banco.abrir_placas = lambda: placas
+        salida = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(salida):
+                r = probar_canal.main(["COMPASS", "--valor", "90"])
+        finally:
+            banco.exigir_servicio_detenido, banco.abrir_placas = originales
+        self.comprobar("sale con 1 y manda a python3 -m h08 motor",
+                       r == 1 and "python3 -m h08 motor" in salida.getvalue(), salida.getvalue())
+        self.comprobar_igual("y no escribió ningún servo", placas.n_servo, 0)
+
+
+class LaCalibracionSeGuarda(Prueba):
+
+    def test_sin_carpeta_de_datos(self):
+        """calibrar guarda aunque datos/ no exista todavía: la medición no se pierde."""
+        from h08 import rutas
+        from h08.herramientas import calibrar_servo
+        archivo = os.path.join(tempfile.mkdtemp(), "datos_nuevos", "calibracion_servos.json")
+        original = rutas.CALIBRACION
+        rutas.CALIBRACION = archivo
+        try:
+            calibrar_servo.guardar({"PCA0:3": {"us_0": 610, "us_180": 2390}})
+            self.comprobar_igual("lo guardado se vuelve a leer", calibrar_servo.cargar(),
+                                 {"PCA0:3": {"us_0": 610, "us_180": 2390}})
+        finally:
+            rutas.CALIBRACION = original
 
 
 class EnMarcha(Prueba):

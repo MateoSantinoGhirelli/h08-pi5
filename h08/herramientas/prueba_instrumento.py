@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 instrumento - probar los instrumentos de a uno, contra su carátula
-================================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Probar los instrumentos de a uno, contra su carátula.
 
 Con el servicio detenido (sudo systemctl stop tablero-h08):
 
@@ -16,15 +12,10 @@ Con el servicio detenido (sudo systemctl stop tablero-h08):
     python3 -m h08 instrumento --simulado --todos --auto
                                                 cómo es, sin hardware
 
-Qué hace con cada uno:
-  * SERVO: lo lleva por los números grandes de SU carátula (los valores de
-    su tabla de calibración), con la misma cuenta que usa el tablero en
-    marcha, y pregunta en cada uno "¿la aguja marca X?".
-  * BRÚJULA (paso a paso): N, E, S, O y vuelta a N.
-  * LUZ: la enciende 2 segundos y pregunta si se vio.
-
-Al final guarda un informe en informes/instrumentos_FECHA.txt y, para cada
-cosa que salió mal, dice con qué se arregla.
+A cada servo lo lleva por los números grandes de SU carátula (los valores de su
+tabla cal), con la misma cuenta que usa el tablero en marcha, y pregunta si la aguja
+marca eso; a la brújula le pide N, E, S, O y vuelta a N; cada luz la enciende 2 s. El
+informe queda en datos/informes/ y, para lo que salió mal, dice con qué se arregla.
 """
 
 import argparse
@@ -64,7 +55,6 @@ def elegir():
     return [it]
 
 
-# ---------------------------------------------------------------------------
 def probar_servo(act, it, P, inf):
     puntos = I.puntos_de_prueba(it)
     print("  %s  -  %s" % (it["nombre"], I.mecanica(it)))

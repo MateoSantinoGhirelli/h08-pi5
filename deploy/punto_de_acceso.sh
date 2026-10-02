@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# ===========================================================================
-#  punto_de_acceso.sh - la Raspberry levanta su propia red wifi
-# ===========================================================================
-#  Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-#  EEST N° 7 - Taller Regional Quilmes
+# punto_de_acceso.sh - la Raspberry levanta su propia red wifi
 #
-#  En una muestra puede no haber wifi, o estar saturado. Con la Raspberry
-#  como punto de acceso el tablero funciona en cualquier lado. La red no
-#  tiene internet: su único servicio es la página del tablero.
+# En una muestra puede no haber wifi, o estar saturado. Con la Raspberry
+# como punto de acceso el tablero funciona en cualquier lado. La red no
+# tiene internet: su único servicio es la página del tablero.
 #
 #      sudo bash deploy/punto_de_acceso.sh encender     levanta la red ahora
 #      sudo bash deploy/punto_de_acceso.sh permanente   que se levante al encender
@@ -17,15 +13,14 @@
 #      sudo bash deploy/punto_de_acceso.sh apagar       vuelve a la red de siempre
 #      sudo bash deploy/punto_de_acceso.sh estado
 #
-#  Raspberry Pi OS (desde Bookworm) maneja la red con NetworkManager: alcanza con
-#  nmcli, sin hostapd ni dnsmasq.
+# Raspberry Pi OS (desde Bookworm) maneja la red con NetworkManager: alcanza con
+# nmcli, sin hostapd ni dnsmasq.
 #
-#  ATENCIÓN: la placa wifi pasa a ser el punto de acceso. Si se está
-#  conectado a la Raspberry por wifi (SSH), la conexión se corta.
+# ATENCIÓN: la placa wifi pasa a ser el punto de acceso. Si se está
+# conectado a la Raspberry por wifi (SSH), la conexión se corta.
 #
-#  El servidor web lee RED, CLAVE e IP de este archivo para armar el cartel
-#  con los códigos QR (http://10.55.0.1:8000/cartel): se cambian sólo acá.
-# ===========================================================================
+# El servidor web lee RED, CLAVE e IP de este archivo para armar el cartel
+# con los códigos QR (http://10.55.0.1:8000/cartel): se cambian sólo acá.
 set -e
 
 RED="Tablero-H08"

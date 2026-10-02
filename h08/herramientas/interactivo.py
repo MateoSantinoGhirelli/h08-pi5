@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-interactivo.py - lo que comparten las pruebas guiadas del tablero
-==================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Lo que comparten las pruebas guiadas del tablero.
 
 Lo usan prueba_instrumento.py, prueba_luces_motor.py y prueba_general.py:
 
@@ -23,7 +19,8 @@ import time
 
 from h08 import rutas
 from h08.config import (TABLERO, TABLERO_POR_ID, MOTORES, SERVO, MOTOR, LED,
-                        BARRIDO, ENGRANAJES, factor_servo, invertido, reduccion)
+                        BARRIDO, ENGRANAJES, SERVO_CFG, factor_servo, invertido,
+                        reduccion)
 from h08.herramientas import banco
 from h08.util import interpolar_tabla
 
@@ -39,9 +36,7 @@ def dormir(seg):
     time.sleep(seg * _ESCALA_TIEMPO[0])
 
 
-# ===========================================================================
 # Preguntas
-# ===========================================================================
 class Preguntas:
     """Hace las preguntas s/n. Con auto=True contesta "s" solo (para la
     prueba simulada o para una demostración sin nadie al lado)."""
@@ -87,9 +82,7 @@ class Preguntas:
             return ""
 
 
-# ===========================================================================
 # Informe
-# ===========================================================================
 class Informe:
     def __init__(self, titulo):
         self.titulo = titulo
@@ -142,9 +135,7 @@ class Informe:
         return ruta
 
 
-# ===========================================================================
 # Salidas: de verdad o de mentira
-# ===========================================================================
 class PlacasDeMentira:
     """Imita ActuadoresPCA9685 sin bus: anota lo último de cada canal."""
 
@@ -157,7 +148,7 @@ class PlacasDeMentira:
         self.motores = None
 
     def limites_us(self, destino):
-        a, b = 500, 2500
+        a, b = SERVO_CFG["pulso_min_us"], SERVO_CFG["pulso_max_us"]
         it = banco.que_hay_en(destino)
         if it is not None and it["actuador"] == SERVO and invertido(it["id"]):
             a, b = b, a
@@ -216,9 +207,7 @@ def abrir_motor(simulado):
     return g
 
 
-# ===========================================================================
 # Instrumentos
-# ===========================================================================
 def angulo_servo(it, valor):
     """Valor de la escala -> ángulo del servo, igual que hardware/mapa.py."""
     return interpolar_tabla(valor, it["cal"]) * factor_servo(it["id"])

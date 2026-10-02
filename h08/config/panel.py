@@ -140,11 +140,11 @@ PANEL_CONMUTADORES = [
              "última en el corte. Sin ella no hay barra eléctrica."},
     {"tipo": "palanca", "id": "SW_GEN",   "pos": (88, 62),  "tam": (66, 80),
      "rot": "GENERATOR", "sub": "200 A", "senal": "generador",
-     "desc": "Conecta el generador a la barra. Entra en línea recien cuando el motor pasa "
+     "desc": "Conecta el generador a la barra. Entra en línea recién cuando el motor pasa "
              "las 1000 RPM: por debajo de esa velocidad no genera tensión suficiente."},
     {"tipo": "palanca", "id": "SW_INV",   "pos": (156, 62), "tam": (66, 80),
      "rot": "INVERTER", "sub": "115 V CA", "senal": "energia",
-     "desc": "Inversor de corriente alterna. Alimenta los giroscopos del horizonte "
+     "desc": "Inversor de corriente alterna. Alimenta los giróscopos del horizonte "
              "artificial y de la brújula. Sigue a la barra principal."},
     {"tipo": "palanca", "id": "SW_PITOT", "pos": (224, 62), "tam": (66, 80),
      "rot": "PITOT HT", "sub": "ANTIHIELO", "senal": "bateria",
@@ -156,7 +156,7 @@ PANEL_CONMUTADORES = [
      "rot": "IGNITION", "senal": "magnetos",
      "opciones": [["OFF", 0], ["L", 1], ["R", 2], ["BOTH", 3]],
      "desc": "Selector de magnetos. En la prueba de run-up se pasa a L y a R para "
-             "verificar que cada magneto sostiene el motor por si solo. La caida "
+             "verificar que cada magneto sostiene el motor por si solo. La caída "
              "normal de RPM al aislar uno es de 50 a 100 RPM."},
     {"tipo": "guarda", "id": "SW_START", "pos": (114, 164), "tam": (88, 78),
      "rot": "STARTER", "sub": "ARRANQUE", "senal": "arrancador",

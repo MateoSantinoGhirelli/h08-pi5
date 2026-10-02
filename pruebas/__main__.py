@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m pruebas - todas las pruebas automáticas, sin hardware
-================================================================
+"""Todas las pruebas automáticas, sin hardware.
 
     python3 -m pruebas              todas (un par de minutos)
     python3 -m pruebas --rapido     sin las lentas: vuelo completo, tablero en

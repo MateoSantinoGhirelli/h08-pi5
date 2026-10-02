@@ -13,7 +13,7 @@
   El tablero se proyecta en una pantalla grande y el que lo opera lo hace
   desde el celular, parado adelante del curso. Son dos usos distintos con dos
   formas distintas: la pantalla proyectada tiene que ser el tablero y nada
-  mas, y el celular tiene que ser botones que se toquen sin mirar.
+  más, y el celular tiene que ser botones que se toquen sin mirar.
 
   Meter las dos cosas en la misma pagina obligaba a que la botonera apareciera
   proyectada, o a esconderla con un truco. Separandolas, cada una es lo que
@@ -50,7 +50,7 @@
  .punto.ok{background:var(--verde)}
  .punto.mal{background:var(--rojo)}
 
- /* el aviso del mando: lo mas importante de la pagina cuando aparece */
+ /* el aviso del mando: lo más importante de la página cuando aparece */
  .mando{padding:.8rem .9rem;font-size:.9rem;line-height:1.45}
  .mando.tengo{background:#17251c;border-bottom:1px solid #274a34;color:#a9dcc0}
  .mando.notengo{background:#2a1f16;border-bottom:1px solid #4a3827;color:#e8c79a}
@@ -169,22 +169,17 @@
 
 <script>
 "use strict";
-// ===========================================================================
-// ESTADO
-// ===========================================================================
+// Estado
 let CAT=null, pausado=false, pilotoON=true, tab=1;
 let tengoMando=false;
 
 const $ = id => document.getElementById(id);
 
-// ===========================================================================
-// ORDENES
-// ---------------------------------------------------------------------------
+// Órdenes
 // Toda orden puede volver con 403 -no sos administrador- o con 409 -el mando
 // lo tiene otro-. Son dos cosas distintas y se avisan distinto: al primero hay
 // que mandarlo a leer el QR, al segundo a pedir el mando. Tratar los dos como
-// "error" dejaria al profesor mirando una pagina que no hace nada.
-// ===========================================================================
+// "error" dejaría al profesor mirando una página que no hace nada.
 async function mandar(url){
   try{
     const r = await fetch(url, {method:'POST'});
@@ -232,9 +227,7 @@ function avisar(que){
   }
 }
 
-// ===========================================================================
-// EL MANDO
-// ===========================================================================
+// El mando
 async function refrescarMando(){
   let e;
   try{ e = await (await fetch('/api/sesion')).json(); }
@@ -289,9 +282,7 @@ async function accionMando(que){
   refrescarMando();
 }
 
-// ===========================================================================
-// LAS LISTAS
-// ===========================================================================
+// Las listas
 function esc(t){
   return String(t).replace(/[&<>"]/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -330,9 +321,7 @@ function dibujarLista(){
   L.innerHTML = h || '<div class="d" style="color:#9aa4ae">Nada para mostrar.</div>';
 }
 
-// ===========================================================================
-// ARRANQUE
-// ===========================================================================
+// Arranque
 async function arrancar(){
   try{
     CAT = await (await fetch('/api/catalogo')).json();
@@ -349,9 +338,9 @@ async function arrancar(){
     try{
       const d = await (await fetch('/api/estado')).json();
       $('modotxt').textContent = d.modo_nombre || '—';
-      // El nombre de la fase y no su explicacion: el que opera esto ya sabe
+      // El nombre de la fase y no su explicación: el que opera esto ya sabe
       // que es un acople de embrague, y necesita leerlo de un vistazo
-      // mientras habla. La explicacion larga esta en el tablero.
+      // mientras habla. La explicación larga esta en el tablero.
       $('fasetxt').textContent = d.fase || d.escenario || '';
       $('sub').textContent = 't = ' + (d.t||0).toFixed(1) + ' s';
       pausado = d.pausado;

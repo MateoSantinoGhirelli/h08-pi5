@@ -1,49 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-paso_a_paso.py - agujas de giro continuo con motores 28BYJ-48
-=============================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""La aguja de la brújula: un 28BYJ-48 de giro continuo, en su propio hilo.
 
-POR QUÉ UN MOTOR PASO A PASO Y NO UN SERVO
----------------------------------------------------------------------------
-Dos indicaciones del tablero dan vueltas enteras: la aguja de centenas del
-altímetro (una vuelta cada 1000 pies) y la rosa de la brújula giroscópica
-(pasa por el norte y sigue). Un servo tiene topes y tendría que desandar la
-vuelta entera cada vez. El 28BYJ-48 gira indefinidamente en los dos sentidos
-y trae una reducción de 63,68:1, así que mueve una aguja sin esfuerzo.
-
-CÓMO SE CONECTA
----------------------------------------------------------------------------
-Cada motor usa la plaquita ULN2003 con la que viene de fábrica, montada junto
-al motor. Los cuatro GPIO de la Raspberry llegan por la placa madre y cables
-Dupont a IN1..IN4 de la plaquita; el motor se enchufa en su conector blanco.
-El ULN2003 es el que maneja la corriente de las bobinas (50 ohm a 5 V: unos
-100 mA cada una, 200 mA con dos a la vez): un pin de la Raspberry no da más
-de 16 mA y no tiene diodos para la descarga inductiva.
-
-La secuencia de MEDIO PASO energiza una o dos bobinas por vez:
-
-        IN1  IN1+IN2  IN2  IN2+IN3  IN3  IN3+IN4  IN4  IN4+IN1
-
-Avanzar un paso es pasar al estado siguiente; retroceder, al anterior.
-
-CÓMO SE MUEVE
----------------------------------------------------------------------------
-Los motores tienen su propio hilo, que duerme hasta el instante del próximo
-paso de cualquiera de los dos. La velocidad sigue un perfil trapezoidal:
-arranca a vel_arranque_pps, acelera hasta vel_max_pps y frena a tiempo para
-detenerse justo en el objetivo. Así no pierde pasos, y un
-motor que no pierde pasos no necesita sensor de posición.
-
-  * CAMINO MÁS CORTO: ir de 350 a 10 grados son 20 hacia adelante, no 340
-    hacia atrás. El objetivo se lleva en grados "desenrollados".
-  * BOBINAS SUELTAS EN REPOSO: quieto más de soltar_tras_s se cortan las
-    bobinas. Un 28BYJ-48 energizado consume y se calienta aunque no se mueva;
-    la reducción alcanza para que la aguja no se corra sola.
-  * POSICIÓN GUARDADA: al apagar en orden, cada aguja vuelve a su cero y se
-    guarda la posición en un archivo. Al encender se lee de ahí. Si hubo un
-    corte de luz, la última posición guardada con el motor quieto sirve igual.
+Da vueltas enteras en los dos sentidos, así que no desanda la vuelta para pasar por
+el norte. Va en medio paso, con perfil trapezoidal para no perder pasos (y por eso
+no necesita sensor de posición), toma siempre el camino más corto, suelta las
+bobinas en reposo y guarda dónde quedó la aguja. Por qué cada cosa: docs/hardware.md.
 """
 
 import json
@@ -63,9 +24,6 @@ def _envolver180(d):
     return (d + 180.0) % 360.0 - 180.0
 
 
-# ===========================================================================
-# Un motor
-# ===========================================================================
 class MotorContinuo:
     """Un 28BYJ-48. 'escribir(pines, bits)' pone los 4 pines de la plaquita."""
 
@@ -79,8 +37,8 @@ class MotorContinuo:
         self.v_min = float(MOTOR_CFG["vel_arranque_pps"])
         self.acel = float(MOTOR_CFG["aceleracion"])
         self.t_soltar = float(MOTOR_CFG["soltar_tras_s"])
-        # Posición en pasos y objetivo en grados, ambos "desenrollados":
-        # pueden pasar de 360 o ser negativos.
+        # posición en pasos y objetivo en grados, los dos "desenrollados": pueden
+        # pasar de 360 o ser negativos, y de ahí sale el camino corto
         g = grados_iniciales % 360.0
         self.pos = int(round(g * self.ppv / 360.0))
         self.obj_grados = g
@@ -91,7 +49,7 @@ class MotorContinuo:
         self.energizado = False
         self.quieto_desde = time.monotonic()
 
-    # -- órdenes (las llama otro hilo; son asignaciones simples) ------------
+    # Las órdenes las llama otro hilo: son asignaciones simples, sin candado.
     def ir_a_grados(self, grados):
         """Objetivo en la vuelta más cercana al objetivo anterior."""
         actual = self.obj_grados
@@ -109,15 +67,11 @@ class MotorContinuo:
         self.pos = 0
         self.obj_grados = 0.0
 
-    # -- servicio (lo llama el hilo de motores) ----------------------------
     def servicio(self, ahora):
-        """
-        Da el paso que corresponda. Devuelve el instante en que quiere que lo
-        vuelvan a llamar, o None si está quieto con las bobinas sueltas.
+        """Da el paso que toque; devuelve cuándo volver a llamarlo (None si está suelto).
 
-        El paso siguiente se programa a 1/velocidad del actual: si el hilo se
-        atrasa, el motor va un poco más lento, nunca más rápido de lo que
-        puede seguir sin perder pasos.
+        El paso siguiente se programa a 1/velocidad del actual: si el hilo se atrasa,
+        el motor va más lento, nunca más rápido de lo que puede seguir sin perder pasos.
         """
         falta = self.objetivo_pasos() - self.pos
         if falta == 0 and self.vel <= self.v_min:
@@ -132,7 +86,7 @@ class MotorContinuo:
             return soltar_en
 
         if not self.energizado:
-            # Re-energizar la fase donde quedó y darle 5 ms al rotor.
+            # re-energiza la fase donde quedó y le da 5 ms al rotor para enganchar
             self.escribir(self.pines, SECUENCIA[self.estado])
             self.energizado = True
             self.proximo = ahora + 0.005
@@ -140,7 +94,7 @@ class MotorContinuo:
         if ahora < self.proximo:
             return self.proximo
 
-        # Perfil trapezoidal, calculado paso a paso: v² cambia 2·a por paso.
+        # perfil trapezoidal paso a paso: v² cambia 2·a en cada uno
         if falta == 0:
             deseada = -self.dir          # llegó con velocidad: frena pasándose
         else:
@@ -178,14 +132,10 @@ class MotorContinuo:
         self.energizado = False
 
 
-# ===========================================================================
-# Salida a los GPIO de la Raspberry Pi 5
-# ===========================================================================
 class EscritorGPIO:
-    """
-    Pone los 4 pines IN1..IN4 de una plaquita. Usa gpiozero, que en la
-    Raspberry Pi 5 trabaja sobre lgpio (RPi.GPIO no funciona con el chip RP1
-    de la Pi 5). Sólo escribe los pines que cambian.
+    """Pone los 4 pines IN1..IN4 de una plaquita; sólo escribe los que cambian.
+
+    Con gpiozero, que en la Pi 5 trabaja sobre lgpio: RPi.GPIO no anda con el RP1.
     """
 
     def __init__(self):
@@ -221,14 +171,10 @@ class EscritorGPIO:
         self.salidas = {}
 
 
-# ===========================================================================
-# Los dos motores del tablero, con su hilo
-# ===========================================================================
 class GestorMotores(threading.Thread):
-    """
-    Recibe los ángulos del mapa del tablero (escribir_motor) y mueve los
-    motores desde su propio hilo. El destino de cada instrumento es
-    ("MOTOR", n), con n la clave de h08.config.MOTORES.
+    """Recibe los ángulos del mapa del tablero y mueve los motores en su propio hilo.
+
+    El destino de cada instrumento es ("MOTOR", n), con n la clave de MOTORES.
     """
 
     PERIODO_QUIETO_S = 0.05      # vuelta del hilo con los motores sueltos
@@ -245,16 +191,14 @@ class GestorMotores(threading.Thread):
             grados, fase = guardado.get(str(n), (0.0, 0))
             self.motores[n] = MotorContinuo(escritor, tuple(m["pines"]),
                                             m.get("sentido", 1), grados, fase)
-        # Todas las entradas de las plaquitas en bajo desde el arranque. Si
-        # algún GPIO arranca con su resistencia de pull-up, sin esto dejaría
-        # una bobina encendida hasta el primer movimiento de ese motor.
+        # Todas las entradas en bajo desde el arranque: si un GPIO levanta con su
+        # pull-up, sin esto quedaría una bobina encendida hasta el primer movimiento.
         for m in self.motores.values():
             m.soltar()
         self._parar = threading.Event()
         self._t_guardado = 0.0
         self._guardado = self._posiciones()
 
-    # -- desde el mapa del tablero -----------------------------------------
     def escribir_motor(self, destino, angulo_deg):
         m = self.motores.get(destino[1])
         if m is not None:
@@ -266,7 +210,6 @@ class GestorMotores(threading.Thread):
             " / ".join(",".join(str(p) for p in m.pines)
                        for m in self.motores.values()))
 
-    # -- hilo ---------------------------------------------------------------
     def run(self):
         while not self._parar.is_set():
             ahora = time.monotonic()
@@ -281,9 +224,8 @@ class GestorMotores(threading.Thread):
                     self._guardar()
             if espera > 0:
                 if pendientes and espera < self.PERIODO_QUIETO_S:
-                    # Entre paso y paso (~1 ms) se usa time.sleep: en Windows
-                    # Event.wait no baja de ~15 ms y el motor iría 15 veces más
-                    # lento (sólo importa al simular en la PC; en la Pi da igual).
+                    # Entre paso y paso (~1 ms), time.sleep y no Event.wait: en Windows
+                    # wait no baja de ~15 ms y el motor simulado iría 15 veces más lento.
                     time.sleep(espera)
                 else:
                     self._parar.wait(min(espera, self.PERIODO_QUIETO_S))
@@ -320,7 +262,6 @@ class GestorMotores(threading.Thread):
         if cerrar:
             cerrar()
 
-    # -- posición persistente ----------------------------------------------
     def _posiciones(self):
         """{"0": [grados de la aguja, fase de la secuencia], ...}"""
         return dict((str(n), [round(m.grados(), 2), m.estado])
@@ -346,6 +287,8 @@ class GestorMotores(threading.Thread):
             return
         tmp = self.archivo + ".tmp"
         try:
+            # datos/ puede no existir todavía (probar el motor en un banco nuevo)
+            os.makedirs(os.path.dirname(os.path.abspath(self.archivo)), exist_ok=True)
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(actual, f)
                 f.flush()

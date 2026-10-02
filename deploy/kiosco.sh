@@ -1,27 +1,22 @@
 #!/usr/bin/env bash
-# ===========================================================================
-#  kiosco.sh - el tablero a pantalla completa en la pantalla de la Raspberry
-# ===========================================================================
-#  Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-#  EEST N° 7 - Taller Regional Quilmes
+# kiosco.sh - el tablero a pantalla completa en la pantalla de la Raspberry
 #
-#  Lo arranca solo el escritorio al encender (instalar.sh deja el archivo
-#  ~/.config/autostart/tablero-kiosco.desktop). A mano:
+# Lo arranca solo el escritorio al encender (instalar.sh deja el archivo
+# ~/.config/autostart/tablero-kiosco.desktop). A mano:
 #
 #      bash deploy/kiosco.sh         abre el tablero en modo kiosco
 #      bash deploy/kiosco.sh parar   lo cierra (para usar el escritorio)
 #
-#  Qué hace:
+# Qué hace:
 #    1. espera a que el servicio del tablero conteste (al encender, el
 #       escritorio suele estar antes que el programa);
 #    2. abre Chromium en modo kiosco en http://localhost:8000/?kiosco=1, con
 #       un perfil propio (no toca el Chromium de todos los días);
 #    3. si Chromium se cierra o se cuelga, lo vuelve a abrir.
 #
-#  La página se recarga sola cuando el tablero se reinicia: después de una
-#  actualización (actualizar.sh) la pantalla muestra la versión nueva sin
-#  tocar nada.
-# ===========================================================================
+# La página se recarga sola cuando el tablero se reinicia: después de una
+# actualización (actualizar.sh) la pantalla muestra la versión nueva sin
+# tocar nada.
 
 PUERTO="${TABLERO_PUERTO:-8000}"
 URL="http://localhost:${PUERTO}/?kiosco=1"

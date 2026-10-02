@@ -6,9 +6,10 @@
 import os
 import re
 import subprocess
+import tempfile
 import unittest
 
-from pruebas.comun import RAIZ, Prueba, leer, mismas, rutas_con
+from pruebas.comun import RAIZ, Prueba, escribir, leer, mismas, rutas_con
 
 DEPLOY = os.path.join(RAIZ, "deploy")
 SCRIPTS = sorted(f for f in os.listdir(DEPLOY) if f.endswith(".sh"))
@@ -70,6 +71,28 @@ class Actualizar(Prueba):
                        and "--exclude '/raspberry_pi5/'" in act)
         self.comprobar("actualizar.sh reconoce el paquete nuevo por h08/__main__.py",
                        "h08/__main__.py" in act and "tablero_pi5" not in act)
+        self.comprobar("actualizar.sh no copia la carpeta instalada sobre sí misma",
+                       '[ "$NUEVO" = "$RAIZ" ]' in act and '[ -n "$PRINCIPAL" ]' in act)
+
+    # Los dos casos salen antes del respaldo y de parar el servicio: en la Pi no se
+    # toca nada. Se saltea donde actualizar.sh no llega hasta ahí (sin el servicio).
+    @unittest.skipIf(os.name == "nt", "actualizar.sh se corre en Linux")
+    def test_rechaza_lo_que_no_es_el_paquete(self):
+        """Un paquete sin h08/__main__.py, o la carpeta instalada, se rechazan."""
+        with tempfile.TemporaryDirectory() as vacio:
+            escribir(os.path.join(vacio, "leeme.txt"), "no es el programa")
+            for origen, aviso in ((vacio, "no es un paquete de la versión nueva"),
+                                  (RAIZ, "es la carpeta que ya está instalada")):
+                try:
+                    r = subprocess.run(["bash", os.path.join(DEPLOY, "actualizar.sh"), origen],
+                                       capture_output=True, text=True, encoding="utf-8",
+                                       errors="replace", timeout=60, cwd=RAIZ)
+                except (OSError, subprocess.SubprocessError):
+                    self.skipTest("sin bash en este sistema")
+                if "no está instalado" in r.stdout or "Falta" in r.stdout:
+                    self.skipTest("el servicio no está instalado en esta máquina")
+                self.comprobar("actualizar.sh rechaza %s" % origen,
+                               r.returncode == 1 and aviso in r.stdout, r.stdout + r.stderr)
 
 
 if __name__ == "__main__":

@@ -180,9 +180,9 @@ a.vista:hover{border-color:var(--acento);color:var(--texto)}
      box-shadow:0 0 20px rgba(63,191,111,.75),inset 0 1px 0 rgba(255,255,255,.3);border-color:#8be8ac}
 
 /* --- laminas SVG: conmutadores y chapas de datos ---
-   La raiz de un <svg> captura el mouse en TODO su rectángulo, no solo donde
+   La raíz de un <svg> captura el mouse en TODO su rectángulo, no solo donde
    hay dibujo. Como las laminas se superponen entre si y con los instrumentos,
-   se apagan los eventos en la raiz y se encienden solo en los controles. */
+   se apagan los eventos en la raíz y se encienden solo en los controles. */
 .lamina{position:absolute;display:block;pointer-events:none}
 .lamina .ctl{cursor:help;pointer-events:auto}
 .lamina .ctl:hover .halo{opacity:1}
@@ -305,18 +305,18 @@ body.kiosco .info, body.kiosco .log{padding-right:260px}
 
 </header>
 
-<!-- Esta pagina es para MIRAR. No tiene un solo control del simulador, y no
-     porque esten escondidos: no estan. El control vive en /mando, que pide la
+<!-- Esta página es para MIRAR. No tiene un solo control del simulador, y no
+     porque estén escondidos: no están. El control vive en /mando, que pide la
      clave del QR del profesor, y el servidor rechaza cualquier orden que no
-     venga de ahi. Ver h08/web/acceso.py.
-     Lo unico que queda es pantalla completa, que no toca el tablero: cambia
+     venga de ahí. Ver h08/web/acceso.py.
+     Lo único que queda es pantalla completa, que no toca el tablero: cambia
      la pantalla del que mira, que para eso es suya. -->
 <div class="franja">
   <div class="est"><b id="fasetxt">—</b><br><span id="fasedesc"></span></div>
   <div style="flex:1"></div>
   <!-- Solo lo ve el administrador. No es una proteccion -el servidor rechaza
-       igual cualquier orden que no venga de una sesion de admin-, es que un
-       visitante no tiene por que ver un boton que lo lleva a una puerta
+       igual cualquier orden que no venga de una sesión de admin-, es que un
+       visitante no tiene por que ver un botón que lo lleva a una puerta
        cerrada. -->
   <a class="aMando" id="aMando" href="/mando" style="display:none"
      title="Tecla M">Mando &rarr;</a>
@@ -345,9 +345,7 @@ body.kiosco .info, body.kiosco .log{padding-right:260px}
 
 <script>
 "use strict";
-// ===========================================================================
-// ESTADO GLOBAL
-// ===========================================================================
+// Estado global
 let CAT=null, EST=null, pausado=false, lampON=false, pilotoON=true;
 // Opciones de la dirección:
 //   ?kiosco=1          la pantalla conectada a la Raspberry (la abre sola al
@@ -369,9 +367,7 @@ let LIENZO=[1460,680];
 const DIN=[], TXT=[];
 let vistos=new Set();          // claves de mensajes ya volcados al registro
 
-// ===========================================================================
-// GEOMETRÍA DE ESFERAS  (lienzo de 200 x 200 para todas)
-// ===========================================================================
+// Geometría de esferas (lienzo de 200 x 200 para todas)
 const C=100;
 function pol(a,r){const t=(a-90)*Math.PI/180;return [C+r*Math.cos(t), C+r*Math.sin(t)];}
 function arco(r,a0,a1){
@@ -393,12 +389,10 @@ function interp(x,t){
 function luzEncendida(s){ return !!(s && ((typeof s.ang==='number')?s.ang:s.v)>=0.5); }
 function V(id){ const s=EST&&EST.instrumentos?EST.instrumentos[id]:null; return s?s.v:0; }
 
-// ===========================================================================
-// CONFIGURACIÓN DE DIBUJO POR INSTRUMENTO
+// Configuración de dibujo por instrumento
 //   inicio  : ángulo de esfera donde arranca la escala (0 = arriba)
 //   barrido : cuantos grados ocupa el recorrido completo
 //   mayor   : paso entre números rotulados      menor : paso entre marcas
-// ===========================================================================
 const ESFERA = {
   AIRSPEED:       {inicio:-150,barrido:300,mayor:20,menor:10,tit:'AIRSPEED',sub:'KNOTS'},
   ALTIMETER:      {tit:'ALTITUDE',sub:'FEET'},
@@ -438,9 +432,7 @@ const CORTO={
   MAP:'Presión de admisión'
 };
 
-// ---------------------------------------------------------------------------
-// PIEZAS COMUNES DE UNA ESFERA
-// ---------------------------------------------------------------------------
+// Piezas comunes de una esfera
 function defs(id){
   return `<defs>
     <radialGradient id="cara${id}" cx="42%" cy="34%" r="78%">
@@ -497,9 +489,7 @@ function hub(){
 function D(cls,get,fmt,circ){ return {cls,get,fmt,circ:!!circ}; }
 const ROT = a => `rotate(${a.toFixed(2)} 100 100)`;
 
-// ---------------------------------------------------------------------------
-// ESFERA COMÚN DE UNA AGUJA
-// ---------------------------------------------------------------------------
+// Esfera común de una aguja
 function dialAguja(it){
   const e=ESFERA[it.id]||{inicio:-135,barrido:270,mayor:(it.max-it.min)/5,menor:(it.max-it.min)/10};
   const cal=it.cal||[];
@@ -534,9 +524,7 @@ function dialAguja(it){
   return {svg:s, din:[ D('d1', ()=>ang(V(it.id)), ROT) ]};
 }
 
-// ---------------------------------------------------------------------------
-// TACÓMETRO DOBLE  (dos agujas concéntricas, dos escalas)
-// ---------------------------------------------------------------------------
+// Tacómetro doble (dos agujas concéntricas, dos escalas)
 function dialTacometro(it){
   const inicio=-135, barrido=270;
   const angE=v=>inicio+(Math.min(Math.max(v,0),3500)/3500)*barrido;
@@ -575,9 +563,7 @@ function dialTacometro(it){
                        D('de',()=>angE(V('TACH_ENG')),ROT) ]};
 }
 
-// ---------------------------------------------------------------------------
 // ALTÍMETRO de tres agujas
-// ---------------------------------------------------------------------------
 function dialAltimetro(it){
   let s=defs('ALT')+bisel('ALT');
   for(let n=0;n<=9;n++){
@@ -608,10 +594,8 @@ function dialAltimetro(it){
                        D('dc',()=>(A()/100%10)*36,ROT,true) ]};
 }
 
-// ---------------------------------------------------------------------------
-// HORIZONTE ARTIFICIAL
+// Horizonte artificial
 //   grupo externo = alabeo (rotate)   ·   grupo interno = cabeceo (translate)
-// ---------------------------------------------------------------------------
 const PX_GRADO=2.1;
 function dialHorizonte(it){
   let s=defs('ATT')+bisel('ATT');
@@ -646,9 +630,7 @@ function dialHorizonte(it){
                        D('dp',()=>V('ATT_PITCH')*PX_GRADO, y=>`translate(0 ${y.toFixed(2)})`) ]};
 }
 
-// ---------------------------------------------------------------------------
-// VIRAJE Y LADEO
-// ---------------------------------------------------------------------------
+// Viraje y ladeo
 function dialViraje(it){
   let s=defs('TRN')+bisel('TRN');
   for(const g of [-18,18]){
@@ -681,9 +663,7 @@ function dialViraje(it){
     D('db',()=>Math.max(-1,Math.min(1,V('SLIP'))),bola) ]};
 }
 
-// ---------------------------------------------------------------------------
-// BRÚJULA GIROSCÓPICA (tarjeta giratoria)
-// ---------------------------------------------------------------------------
+// Brújula giroscópica (tarjeta giratoria)
 function dialBrujula(it){
   let s=defs('CMP')+bisel('CMP');
   s+=`<g class="dg" transform="rotate(0 100 100)">`;
@@ -715,9 +695,7 @@ function dialBrujula(it){
           txt:[ {cls:'dn', get:()=>String(Math.round(V('COMPASS'))%360).padStart(3,'0')+'°'} ]};
 }
 
-// ---------------------------------------------------------------------------
-// INDICADOR DE RUMBO AN/ARN-14  (CDI)
-// ---------------------------------------------------------------------------
+// Indicador de rumbo an/arn-14 (cdi)
 function dialCDI(it){
   let s=defs('CDI')+bisel('CDI');
   for(let i=-2;i<=2;i++){
@@ -738,9 +716,7 @@ function dialCDI(it){
                           x=>`translate(${x.toFixed(2)} 0)`) ]};
 }
 
-// ---------------------------------------------------------------------------
-// RELOJ DE CABINA  (mecánico: no lleva canal, lo mueve el tiempo simulado)
-// ---------------------------------------------------------------------------
+// Reloj de cabina (mecánico: no lleva canal, lo mueve el tiempo simulado)
 function dialReloj(it){
   let s=defs('CLK')+bisel('CLK');
   for(let n=0;n<60;n++){
@@ -768,28 +744,22 @@ function dialReloj(it){
 const CONSTRUCTOR={tacometro:dialTacometro, altimetro:dialAltimetro, horizonte:dialHorizonte,
                    viraje:dialViraje, brujula:dialBrujula, cdi:dialCDI, reloj:dialReloj};
 
-// ===========================================================================
-// CARÁTULAS IMPRESAS
-// ===========================================================================
-// Si el servidor tiene las carátulas (web/caratulas, las copia
-// herramientas/caratulas_web.py), cada instrumento se dibuja con la MISMA
-// carátula que está pegada en el tablero físico, y la aguja se pone con la
-// misma cuenta que caratulas.py usó para ubicar cada número:
+// Carátulas impresas: si el servidor las tiene (h08/web/static/caratulas, copias de
+// las que están pegadas en el tablero), cada instrumento se dibuja con la suya y la
+// aguja se ubica con la misma cuenta que se usó para dibujarlas:
 //
 //     tabla de calibración (0..180)  ->  barrido real  ->  ángulo de dibujo
 //
-// Así el número que marca la aguja en la pantalla es el mismo que marca la
-// aguja de verdad, aunque se cambie un barrido o una calibración: basta con
-// regenerar las carátulas. El horizonte no tiene carátula con aguja (lo que se
-// mueve es un disco) y sigue con su dibujo propio.
-// ===========================================================================
+// Así el número que marca la aguja en la pantalla es el mismo que marca la de verdad.
+// El horizonte no tiene carátula con aguja (lo que se mueve es un disco) y sigue con
+// su dibujo propio.
 function barridoDe(it){
   const b=it.barrido;
   if(b==='CONT') return 360;
   return (typeof b==='number')?b:180;
 }
 // Ángulo del actuador -> ángulo matemático de dibujo (90 = arriba, antihorario).
-// Es caratulas.ang_dibujo, renglón por renglón.
+// Es la misma cuenta con la que se dibujaron las carátulas (docs/mecanica.md).
 function angDibujo(it,a){
   const B=barridoDe(it), c=(typeof it.centro==='number')?it.centro:90;
   const ad=(it.tipo==='MOTOR')?a:a*B/180;
@@ -876,13 +846,10 @@ function fabricaDe(it){
   return CONSTRUCTOR[it.dial]||dialAguja;
 }
 
-// ===========================================================================
-// PANEL DE CONMUTADORES
-// ===========================================================================
+// Panel de conmutadores
 // Se dibuja en una sola lamina SVG con el mismo sistema de coordenadas del
 // tablero, así los números de h08/config se usan tal cual. Cada llave se anima
 // a partir del estado del simulador.
-// ===========================================================================
 function senal(nombre){
   const m=(EST&&EST.mandos)||{};
   switch(nombre){
@@ -942,7 +909,7 @@ function dibujarConmutadores(lista){
       continue;
     }
 
-    // ---- controles con zona sensible al mouse -----------------------------
+    // Controles con zona sensible al mouse
     const g0=`<g class="ctl" data-sw="${c.id}">
         <rect class="halo" x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="#d7a93f"
           fill-opacity=".13" opacity="0"/>
@@ -1055,19 +1022,16 @@ function dibujarConmutadores(lista){
   return {svg:s, din:din, ctl:lista.filter(c=>c.id)};
 }
 
-// ===========================================================================
-// CHAPAS DE DATOS
-// ===========================================================================
+// Chapas de datos
 // La ficha de la célula y la tabla de limitaciones no cambian nunca: se
 // dibujan una vez y no vuelven a tocarse. Los números vienen calculados
 // desde h08/config, así que no hay ni una cifra escrita en esta página.
-// ===========================================================================
 function dibujarPlacas(lista){
   let s='';
   for(const p of lista||[]){
     const [x,y]=p.pos, [w,h]=p.tam;
 
-    // --- chapa de datos: placa metalica remachada sobre la estructura ------
+    // Chapa de datos: placa metálica remachada sobre la estructura
     s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#5f6850"
           stroke="#262c1c" stroke-width="1.2"/>
         <rect x="${x+1}" y="${y+1}" width="${w-2}" height="${h/2}" rx="2" fill="#6e7760" opacity=".45"/>
@@ -1089,9 +1053,7 @@ function dibujarPlacas(lista){
   return {svg:s, din:[]};
 }
 
-// ===========================================================================
-// CONSTRUCCIÓN DEL TABLERO  (una sola vez)
-// ===========================================================================
+// Construcción del tablero (una sola vez)
 function montar(raiz, din, txt){
   (din||[]).forEach(d=>{
     const el=raiz.querySelector('.'+d.cls);
@@ -1116,12 +1078,12 @@ function construir(){
 
   let h='';
 
-  // --- regiones ---
+  // Regiones
   const zonas=CAT.zonas||[];
   zonas.forEach(z=>{
-    // El id deja agarrar una region entera desde afuera -capturas.py le saca
-    // la foto al anunciador para los documentos-. Sin id habia que recortar
-    // por coordenadas, que se rompe apenas alguien mueve un instrumento.
+    // El id deja agarrar una región entera desde afuera, por ejemplo para sacarle
+    // una foto al anunciador. Sin id había que recortar por coordenadas, que se
+    // rompe apenas alguien mueve un instrumento.
     h+=`<div class="zona ${z.estilo}" id="Z_${z.id}" style="left:${z.pos[0]}px;top:${z.pos[1]}px;
          width:${z.tam[0]}px;height:${z.tam[1]}px"><span class="tit">${z.titulo}</span></div>`;
     // Los sub-paneles negros van atornillados sobre la estructura verde. En
@@ -1137,7 +1099,7 @@ function construir(){
     }
   });
 
-  // --- lamina del panel de conmutadores ---
+  // Lámina del panel de conmutadores
   // Un solo SVG con el viewBox puesto en coordenadas del tablero: los números
   // de h08/config entran tal cual, sin conversión.
   const zSW=zonas.find(z=>z.id==='SW');
@@ -1148,20 +1110,20 @@ function construir(){
           viewBox="${zSW.pos[0]} ${zSW.pos[1]} ${zSW.tam[0]} ${zSW.tam[1]}">${conm.svg}</svg>`;
   }
 
-  // --- lamina de las chapas de datos (una sola, sobre todo el lienzo) ---
+  // Lámina de las chapas de datos (una sola, sobre todo el lienzo)
   const placas=dibujarPlacas(CAT.placas||[]);
   h+=`<svg class="lamina" id="laminaPL"
         style="left:0;top:0;width:${LIENZO[0]}px;height:${LIENZO[1]}px"
         viewBox="0 0 ${LIENZO[0]} ${LIENZO[1]}">${placas.svg}</svg>`;
 
-  // --- instrumentos ---
+  // Instrumentos
   const dials=[];
   (CAT.instrumentos||[]).filter(i=>i.pos).forEach(it=>{
     const fabrica=fabricaDe(it);
     const d=fabrica(it); dials.push([it,d]);
-    // El numero de canal no va en la caratula: es informacion de armado,
-    // no de vuelo. En un tablero real no dice "#23" al lado de la presion
-    // de admision. Sigue estando en la ficha que aparece al tocar el
+    // El número de canal no va en la carátula: es información de armado,
+    // no de vuelo. En un tablero real no dice "#23" al lado de la presión
+    // de admisión. Sigue estando en la ficha que aparece al tocar el
     // instrumento, que es donde hace falta.
     const num = '';
     h+=`<div class="inst" id="I_${it.id}" data-inst="${it.id}"
@@ -1170,7 +1132,7 @@ function construir(){
          <div class="rot">${num}${CORTO[it.id]||it.nombre}</div></div>`;
   });
 
-  // --- las luces de alerta, cada una al lado de lo que vigila ---
+  // Las luces de alerta, cada una al lado de lo que vigila
   // XMSN PRESS al lado de las dos agujas de transmisión se explica sola.
   // Cada luz trae su lugar desde h08/config, igual que cada instrumento.
   (CAT.anunciador||[]).forEach(a=>{
@@ -1182,7 +1144,7 @@ function construir(){
 
   T.innerHTML=h;
 
-  // --- se cachean los elementos animados, una sola vez ---
+  // Se cachean los elementos animados, una sola vez
   dials.forEach(([it,d])=>{ montar(document.getElementById('S_'+it.id), d.din, d.txt); });
   const lSW=document.getElementById('laminaSW'); if(lSW) montar(lSW, conm.din);
 
@@ -1236,9 +1198,7 @@ if(window.ResizeObserver){
   new ResizeObserver(pedirEscalar).observe(document.getElementById('marco'));
 }
 
-// ===========================================================================
-// PANTALLA COMPLETA
-// ===========================================================================
+// Pantalla completa
 // Dos cosas a la vez: se oculta todo lo que no es el tablero (clase 'plena')
 // y se pide pantalla completa al navegador, para que en el proyector no quede
 // ni la barra de direcciones. Si el navegador la niega, la clase alcanza.
@@ -1267,13 +1227,10 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape') pantallaCompleta(false);
 });
 
-// ===========================================================================
-// ANIMACIÓN
-// ===========================================================================
+// Animación
 // La telemetría llega a 5 Hz. Si las agujas saltaran de una lectura a la otra
 // el tablero se vería a los tirones. Un retardo de primer orden a 60 Hz las
 // lleva al valor nuevo igual que hace la inercia del servo real.
-// ===========================================================================
 const TAU=0.075;
 let tPrev=0, rafPend=false;
 
@@ -1314,9 +1271,7 @@ function pedirCuadro(){
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ tPrev=0; pedirCuadro(); } });
 
-// ===========================================================================
-// LLEGADA DE TELEMETRÍA
-// ===========================================================================
+// Llegada de telemetría
 function pintar(d){
   EST=d;
   document.getElementById('modotxt').textContent=d.modo_nombre;
@@ -1374,9 +1329,7 @@ function pintar(d){
   if(vistos.size>400) vistos=new Set();
 }
 
-// ===========================================================================
-// BARRA DE INFORMACIÓN  (un solo escucha de eventos para todo el tablero)
-// ===========================================================================
+// Barra de información (un solo escucha de eventos para todo el tablero)
 function mostrarInfo(id){
   const it=(CAT.instrumentos||[]).find(x=>x.id===id);
   if(!it) return;
@@ -1450,16 +1403,12 @@ TAB.addEventListener('click',e=>{
   const s=e.target.closest('[data-sw]');  if(s) verLlave(s.dataset.sw);
 });
 
-// ===========================================================================
-// ESTA PÁGINA SÓLO MIRA
-// ===========================================================================
-// Las órdenes al tablero están en web/mando.html, la página del
+// Esta página sólo mira
+// Las órdenes al tablero están en mando.html, la página del
 // administrador. El servidor además rechaza toda orden que no venga de una
 // sesión de administrador: esa es la protección que vale.
 
-// ===========================================================================
 // TRANSPORTE: consulta periódica del estado (cada 250 ms)
-// ===========================================================================
 function conex(ok,txt){
   document.getElementById('conex').className=ok?'punto on':'punto';
   document.getElementById('conextxt').textContent=txt;

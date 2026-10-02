@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 luces-motor - las seis luces de alerta y el motor de la brújula
-=============================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Las seis luces de alerta y el motor de la brújula.
 
 Con el servicio detenido (sudo systemctl stop tablero-h08):
 
@@ -12,22 +8,12 @@ Con el servicio detenido (sudo systemctl stop tablero-h08):
     python3 -m h08 luces-motor --motor       sólo el motor
     python3 -m h08 luces-motor --simulado --auto   cómo es, sin hardware
 
-LUCES (PCA1, canales 8 a 13)
-  El ánodo de cada LED va a +5 V (J8) y el cátodo vuelve por su resistencia
-  de 220 ohm (R2..R7) a una salida del PCA9685 (J7): la luz ENCIENDE con la
-  salida en BAJO. El programa ya lo sabe (LUCES_ACTIVAS_EN_BAJO).
-    1. prueba de lámparas: las seis juntas;
-    2. de a una, con su leyenda y su color: así se ve si hay dos cruzadas;
-    3. todas apagadas: se mira si queda alguna "fantasma" (apenas encendida).
-
-MOTOR DE LA BRÚJULA (28BYJ-48 + plaquita ULN2003, GPIO 12-16-20-21)
-    1. bobinas de a una: los LED A, B, C, D de la plaquita en ese orden;
-    2. N, E, S, O y vuelta a N;
-    3. camino corto: de 350° a 10° tiene que ir 20° hacia adelante;
-    4. tres vueltas y vuelve: tiene que quedar exactamente donde estaba;
-    5. quieto, suelta las bobinas: los LED de la plaquita se apagan.
-
-Guarda el informe en informes/luces_motor_FECHA.txt.
+Las luces (PCA1, canales 8 a 13) van en la prueba de lámparas, después de a una con
+su leyenda y su color -así se ven dos cruzadas- y al final todas apagadas, para mirar
+si queda alguna «fantasma». El motor va con las bobinas de a una (los LED de la
+plaquita en orden A, B, C, D), N-E-S-O-N, el camino corto de 350° a 10°, tres vueltas
+de ida y vuelta sin perder pasos, y las bobinas sueltas en reposo. El informe queda
+en datos/informes/.
 """
 
 import argparse

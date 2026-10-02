@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 canal - probar servos y luces de a uno
-=====================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""Probar servos y luces de a uno.
 
 Con el servicio del tablero detenido (sudo systemctl stop tablero-h08):
 
@@ -26,7 +22,7 @@ import argparse
 import time
 
 from h08 import rutas
-from h08.config import TABLERO, PLACAS, LED, SERVO, factor_servo
+from h08.config import TABLERO, PLACAS, LED, MOTOR, SERVO, factor_servo
 from h08.herramientas import banco
 from h08.util import interpolar_tabla
 
@@ -134,6 +130,10 @@ def main(argv=None):
             ap.print_help()
             return 1
         print("  " + banco.nombre_de(destino))
+        if it is not None and it["actuador"] == MOTOR:
+            # no va por el PCA9685: sin esto decía «servo a 90°» y no se movía nada
+            print("  Es el motor paso a paso: se prueba con  python3 -m h08 motor")
+            return 1
         if it is not None and it["actuador"] == LED:
             print("  Es una luz: encendida 3 s.")
             act.escribir_led(destino, True)

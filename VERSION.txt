@@ -1,4 +1,4 @@
-H08_Pi5 2026-10-02 02:49  ·  huella 96f3842fc9fe
+H08_Pi5 2026-10-02 08:42  ·  huella ab7e586ba3c5
 Tablero didáctico H-08 · Sikorsky S-55 / H-19A · programa de la Raspberry Pi 5
 archivos  89
 Se ve al arrancar el programa y en python3 -m h08 diagnostico.

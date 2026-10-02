@@ -1,32 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-python3 -m h08 calibrar - el pulso exacto de 0° y de 180° de cada servo
-=======================================================================
-Proyecto H-08 · Tablero didáctico del Sikorsky S-55 / H-19A
-EEST N° 7 - Taller Regional Quilmes
+"""El pulso exacto de 0° y de 180° de cada servo.
 
-POR QUÉ
----------------------------------------------------------------------------
-El programa convierte grados en ancho de pulso con valores nominales:
-500 us = 0° y 2500 us = 180°. Cada servo real es distinto (sobre todo los
-SG90 y los clones del MG90S): con los valores nominales uno llega a 170°,
-otro a 195°, otro zumba contra su tope. La aguja no cae en las marcas.
+Cada servo real llega a un lado distinto con el mismo pulso, así que la aguja no cae
+en las marcas. Acá se mide con un transportador impreso y se guarda por canal; la
+tabla cal del instrumento no se toca. Por qué y cómo se apoya el servo:
+docs/calibracion.md.
 
-La calibración mide, con un transportador impreso, qué pulso deja el brazo
-del servo exactamente en 0° y en 180°. La calibración del instrumento (qué
-ángulo corresponde a cada valor de la esfera) no se toca: sólo cambia cómo se
-convierte ese ángulo en pulso.
+Con el servicio detenido (sudo systemctl stop tablero-h08):
 
-EL TRANSPORTADOR
----------------------------------------------------------------------------
-Se imprime al 100 % (Transportador_servo.pdf), se pega sobre cartón y se
-apoya el servo con el eje sobre la cruz, mirándolo desde el lado del eje:
-0° queda a la IZQUIERDA y 180° a la DERECHA, por arriba. Así se calibran
-todos los servos, lleven engranajes o no: el programa sabe cuáles invierten
-el sentido (h08.config.invertido) y lo corrige solo.
-
-USO (con el servicio detenido: sudo systemctl stop tablero-h08)
----------------------------------------------------------------------------
     python3 -m h08 calibrar PCA0 3 --asistente     calibración guiada
     python3 -m h08 calibrar PCA0 --todos           los 16 canales, uno por uno
     python3 -m h08 calibrar PCA0 3 --probar        0 -> 180 -> 0 con lo guardado
@@ -35,9 +16,7 @@ USO (con el servicio detenido: sudo systemctl stop tablero-h08)
     python3 -m h08 calibrar PCA0 3 --pulso 1500    deja ese pulso fijo
     python3 -m h08 calibrar PCA0 3 --explorar abajo   busca el tope (Ctrl+C)
 
-En lugar de «PCA0 3» se puede escribir el id del instrumento, por ejemplo
-AIRSPEED. Lo medido queda en datos/calibracion_servos.json, que el
-tablero lee al arrancar. Ese archivo es de ESTE tablero y no se copia a otro.
+En lugar de «PCA0 3» se puede escribir el id del instrumento, por ejemplo AIRSPEED.
 """
 
 import argparse
@@ -62,6 +41,9 @@ def cargar():
 
 
 def guardar(cal):
+    # En un banco donde el tablero nunca arrancó, datos/ todavía no existe: sin esto
+    # la medición entera se perdía al contestar «¿Guardar?».
+    os.makedirs(os.path.dirname(rutas.CALIBRACION), exist_ok=True)
     tmp = rutas.CALIBRACION + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(cal, f, indent=1, sort_keys=True)
@@ -87,9 +69,7 @@ def listar(cal):
     print("")
 
 
-# ===========================================================================
 # Asistente
-# ===========================================================================
 def ajustar(act, destino, us, marca):
     """Mueve el brazo con + y - hasta la marca. Devuelve (pulso, ángulo leído)."""
     print("\n  Llevar el brazo a la marca de %d°." % marca)
@@ -188,7 +168,6 @@ def barrer(act, destino):
         time.sleep(0.02)
 
 
-# ===========================================================================
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python3 -m h08 calibrar",
                                  description="Calibrar servos con el transportador")

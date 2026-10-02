@@ -1,38 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
-senales.py - bus de señales y modelo de sensor
-===============================================
+"""Lo que pasa de verdad y lo que marca la aguja, con el sensor en el medio.
 
-EL CONCEPTO CENTRAL DEL SIMULADOR
---------------------------------------------------------------------------
-En una aeronave conviven dos cosas distintas que conviene no confundir:
-
-  1) EL VALOR REAL      -> lo que físicamente pasa en la máquina.
-                           Ej.: la presión de aceite realmente cayó a 10 psi.
-
-  2) EL VALOR INDICADO  -> lo que muestra la aguja en el tablero.
-                           Ej.: el transmisor se cortó y la aguja marca 0,
-                           pero el motor está perfecto.
-
-Una FALLA DE SISTEMA cambia (1). Una FALLA DE INDICACIÓN cambia sólo (2).
-Distinguirlas es lo que se le enseña a un piloto o a un técnico: antes de
-cortar el motor, verificar si lo que falló es el motor o el instrumento. Este
-módulo implementa esa separación.
-
-Entre (1) y (2) está el MODELO DE SENSOR, que agrega los defectos que tiene
-todo instrumento real:
-  * retardo (tau) : ningún sensor responde instantáneamente
-  * ruido         : vibración del motor radial y ruido eléctrico
+Son dos cosas distintas: una falla de sistema cambia el valor real y una falla de
+indicación cambia sólo lo que se ve. Distinguirlas es lo que se le enseña a un
+técnico: antes de cortar el motor, ver si falló el motor o el instrumento. Entre
+las dos está el modelo de sensor, con su retardo, su ruido y las anomalías que
+inyectan las fallas (docs/modelo_vuelo.md).
 """
 
 from h08.util import aproximar, limitar, RNG
 
-# ---------------------------------------------------------------------------
 # Modelo de sensor por señal:  (tau_segundos, amplitud_ruido_en_unidades)
-# ---------------------------------------------------------------------------
 # El ruido se calibró a ojo: un R-1340 es un radial de 9 cilindros, vibra
 # mucho, y las agujas de presión tiemblan visiblemente.
-# ---------------------------------------------------------------------------
 SENSORES = {
     "ias_kt":        (0.30, 0.6),
     "alt_ind_ft":    (0.40, 4.0),
@@ -60,12 +40,10 @@ SENSORES = {
     "cdi":           (0.80, 0.05),
 }
 
-# ---------------------------------------------------------------------------
 # Señales CIRCULARES y su período. El rumbo pasa de 359 a 0 grados y la
 # aguja de centenas del altímetro de 999 a 0 pies: para el filtro esos saltos
 # no existen, la diferencia se mide por el camino corto. Si no, al cruzar el
 # norte la rosa desandaría una vuelta entera hacia atrás.
-# ---------------------------------------------------------------------------
 CIRCULARES = {
     "hdg_ind_deg": 360.0,
     "alt_centenas": 1000.0,
@@ -77,9 +55,7 @@ def envolver(d, periodo):
     return (d + periodo / 2.0) % periodo - periodo / 2.0
 
 
-# ---------------------------------------------------------------------------
 # Tipos de anomalía de INDICACIÓN que puede sufrir una señal
-# ---------------------------------------------------------------------------
 IND_CONGELADO = "congelado"   # la aguja se traba en el último valor
 IND_FIJO = "fijo"             # la aguja va a un valor fijo (ej: 0 = transductor cortado)
 IND_RUIDO = "ruido"           # aguja errática (mal contacto)
@@ -90,7 +66,7 @@ class BusSenales:
     """
     Contenedor de las magnitudes del simulador.
 
-    real[]     : lo que pasa fisicamente (lo escribe el modelo de vuelo)
+    real[]     : lo que pasa físicamente (lo escribe el modelo de vuelo)
     indicado[] : lo que muestra el tablero (lo lee la capa de actuadores)
     """
 
@@ -102,7 +78,7 @@ class BusSenales:
         self._fase_osc = 0.0
         self._inicializado = False
 
-    # -- ciclo de vida ------------------------------------------------------
+    # Ciclo de vida
     def poner(self, nombre, valor):
         self.real[nombre] = valor
 
@@ -113,7 +89,7 @@ class BusSenales:
         """Valor INDICADO (el que ve el piloto)."""
         return self.indicado.get(nombre, por_defecto)
 
-    # -- anomalías de indicación -------------------------------------------
+    # Anomalías de indicación
     def limpiar_anomalias(self):
         self._anomalias = {}
 
@@ -127,7 +103,7 @@ class BusSenales:
     def tiene_anomalia(self, senal):
         return senal in self._anomalias
 
-    # -- actualización ------------------------------------------------------
+    # Actualización
     def actualizar_indicaciones(self, dt, energia=1.0, vibracion=0.0):
         """
         Convierte real[] -> indicado[] aplicando:
@@ -219,38 +195,10 @@ class BusSenales:
             self.indicado[nombre] = mostrado % periodo if periodo else mostrado
 
 
-# ===========================================================================
-# QUÉ INSTRUMENTOS DEPENDEN DE LA BARRA ELÉCTRICA Y CUÁLES NO
-# ===========================================================================
-# No todos los instrumentos dependen de la barra de 24 V, y saber cuáles no
-# es lo que permite volar con una falla eléctrica total. En el H-19A:
-#
-# SIGUEN FUNCIONANDO SIN ENERGÍA
-#   * Velocímetro, altímetro y variómetro: son NEUMATICOS. Viven del tubo
-#     pitot y de la toma estática. No tienen un solo cable.
-#   * Tacómetro doble: lo mueve un generador tacométrico arrastrado por el
-#     motor y por la transmisión. Fabrica su propia corriente. Por eso se lo
-#     puede mirar durante el arrastre del arrancador, cuando la barra está
-#     en 18 V y el resto del tablero está a media asta. Es EL instrumento del
-#     arranque.
-#   * Manómetros de presión de aceite, de combustible y de admisión: son de
-#     tubo Bourdon, con una cañería que lleva el fluido hasta el instrumento.
-#     Mecánicos puros.
-#   * Temperatura de cabeza de cilindro: TERMOCUPLA. Genera su propia
-#     tensión por efecto Seebeck. Tampoco necesita alimentación.
-#   * Reloj de cabina: mecánico, de cuerda.
-#
-# DEJAN DE INDICAR CON LA BARRA CAÍDA
-#   * Aforadores de combustible: flotante y puente de resistencia.
-#   * Temperaturas de aceite y de aire de carburador: bulbos de resistencia.
-#   * Presión y temperatura de transmisión: transmisores eléctricos.
-#   * Horizonte artificial e indicador de rumbo: giróscopos alimentados por
-#     el inversor. No se apagan de golpe: se van cayendo, que es peor.
-#   * Indicador de rumbo del receptor de radionavegación.
-#   * Todas las luces de alerta.
-#
-# Esta lista es la base del escenario de falla eléctrica.
-# ===========================================================================
+# Las señales que se caen con la barra. Las que no están acá siguen indicando sin
+# energía porque son neumáticas, mecánicas o fabrican su propia corriente, y saber
+# cuáles son es lo que permite volar con una falla eléctrica total: la lista con el
+# instrumento de cada una está en docs/modelo_vuelo.md.
 _SENALES_ELECTRICAS = (
     "oil_t_c", "cat_c",
     "fuel_fwd_l", "fuel_aft_l", "xmsn_p_psi", "xmsn_t_c",
