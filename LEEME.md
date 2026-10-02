@@ -245,6 +245,7 @@ Todos los comandos, desde `~/H08_Pi5`.
 |---|---|
 | La pantalla queda en el escritorio | `bash deploy/kiosco.sh`. Si al reiniciar sigue igual: `python3 -m h08 diagnostico`, punto 6 |
 | La página dice «sin conexión» | `sudo systemctl status tablero-h08`, `journalctl -u tablero-h08 -n 50` |
+| Algo raro y no se sabe qué | `journalctl -u tablero-h08 -p warning`: muestra sólo los avisos y errores del tablero (placa que no responde o que se reinició, errores del bus I2C, errores del programa) |
 | `No module named h08` | el comando se corrió fuera de la carpeta: `cd ~/H08_Pi5` y repetir |
 | Ninguna aguja se mueve | `python3 -m h08 diagnostico`: el punto 3 dice si responden los PCA9685 |
 | Una sola aguja no se mueve | `python3 -m h08 instrumento ESA`, después el cable de su canal |

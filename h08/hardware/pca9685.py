@@ -48,6 +48,7 @@ try:
 except ImportError:         # en Windows se puede correr todo en modo simulado
     fcntl = None
 import json
+import logging
 import os
 import time
 
@@ -55,6 +56,8 @@ from h08.util import limitar
 from h08.config import (SERVO_CFG, LUCES_ACTIVAS_EN_BAJO, I2C_BUS, PLACAS,
                         TABLERO, LED, invertido)
 from h08.hardware.base import ActuadoresBase
+
+log = logging.getLogger(__name__)
 
 # --- Registros y bits del PCA9685 -----------------------------------------
 MODE1 = 0x00
@@ -196,6 +199,9 @@ class ActuadoresPCA9685(ActuadoresBase):
     """
 
     CADA_VIGILANCIA_S = 2.0
+    # Con un cable flojo el bus puede fallar en cada ciclo (20 por segundo): el
+    # registro anota uno cada tanto y el total queda en salud().
+    CADA_AVISO_BUS_S = 10.0
 
     def __init__(self, placas=PLACAS, bus=None, calibracion=None, motores=None):
         self.bus = bus if bus is not None else BusI2C()
@@ -208,11 +214,14 @@ class ActuadoresPCA9685(ActuadoresBase):
                                               SERVO_CFG["frecuencia_hz"])
             else:
                 self.faltantes.append("%s (0x%02X)" % (nombre, direccion))
+                log.warning("la placa %s (0x%02X) no responde: el tablero sigue sin ella",
+                            nombre, direccion)
 
         self.cal = cargar_calibracion(calibracion)
         self.errores = 0
         self.ultimo_error = ""
         self._t_vigilancia = time.monotonic()
+        self._t_aviso_bus = None
 
         # Estado inicial seguro: servos sin pulso y luces apagadas.
         self.luces = set()
@@ -309,6 +318,8 @@ class ActuadoresPCA9685(ActuadoresBase):
             try:
                 if vigilar and placa.se_reinicio():
                     placa.reinicios += 1
+                    log.warning("la placa %s se reinició (¿caída de tensión?): se la vuelve "
+                                "a configurar y recupera sus canales", nombre)
                     placa.configurar()
                 n += placa.volcar()
             except OSError as e:
@@ -316,6 +327,10 @@ class ActuadoresPCA9685(ActuadoresBase):
                 # reintenta en el próximo ciclo.
                 self.errores += 1
                 self.ultimo_error = "%s: %s" % (nombre, e)
+                if self._t_aviso_bus is None or ahora - self._t_aviso_bus >= self.CADA_AVISO_BUS_S:
+                    self._t_aviso_bus = ahora
+                    log.warning("error en el bus I2C con la placa %s: %s (van %d)",
+                                nombre, e, self.errores)
         return n
 
     def cerrar(self):

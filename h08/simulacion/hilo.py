@@ -22,13 +22,15 @@ error se cuenta y se informa, y el lazo sigue: el tablero no se queda
 congelado delante del público.
 """
 
+import logging
 import queue
 import threading
 import time
-import traceback
 
 from h08.simulacion.simulador import Simulador
 from h08.config import LAZO
+
+log = logging.getLogger(__name__)
 
 
 class HiloSimulacion(threading.Thread):
@@ -81,8 +83,8 @@ class HiloSimulacion(threading.Thread):
                 self.errores += 1
                 self.ultimo_error = "%s: %s" % (type(e).__name__, e)
                 if self.errores <= 3 or self.errores % 100 == 0:
-                    print("[simulación] error %d:" % self.errores)
-                    traceback.print_exc()
+                    log.exception("error %d en el lazo de simulación; el tablero sigue",
+                                  self.errores)
                 time.sleep(0.2)
             time.sleep(0.005)
 
@@ -94,7 +96,7 @@ class HiloSimulacion(threading.Thread):
         try:
             self.actuadores.cerrar()
         except Exception:
-            traceback.print_exc()
+            log.exception("no se pudieron dejar las salidas en reposo al apagar")
 
     def _salud(self):
         d = {"errores_programa": self.errores, "ultimo_error": self.ultimo_error}

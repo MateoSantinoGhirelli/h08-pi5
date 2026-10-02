@@ -245,7 +245,11 @@ Reglas para un programa que corre como servicio:
   paquete; nada interactivo (`input()`), nada gráfico.
 - Atrapar **SIGTERM** y apagar en orden (luces, servos, motor a cero) dentro de
   `TimeoutStopSec`.
-- La salida va al registro: `journalctl -u tablero-h08 -f`.
+- La salida va al registro con `logging` (`h08/registro.py`): cada línea con su nivel
+  en castellano (INFO, AVISO, ERROR) y, bajo systemd, con la prioridad que lee
+  journald. `journalctl -u tablero-h08 -f` lo sigue en vivo y
+  `journalctl -u tablero-h08 -p warning` muestra sólo avisos y errores. `print` queda
+  sólo para las herramientas que le hablan a una persona en la terminal.
 - Comandos: `sudo systemctl enable|start|stop|restart|status tablero-h08`.
 
 ### 5.6 Pantalla en modo kiosco

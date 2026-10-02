@@ -36,6 +36,10 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
   corre en la Pi.
 - Imports absolutos (`from h08.hardware import pca9685`); nada de `sys.path.insert`
   dentro de `h08/`. Toda ruta de archivo sale de `h08/rutas.py`.
+- Mensajes del servicio y del núcleo: `log = logging.getLogger(__name__)` y
+  `log.info/warning/exception` (lo configura `h08/registro.py`; en el journal se
+  filtra con `journalctl -u tablero-h08 -p warning`). `print` sólo en las herramientas
+  que le hablan a una persona en la terminal y en `--qr-admin`.
 - **Nunca** crear, leer para copiar, ni meter en un zip o en git:
   `datos/secreto_admin.json`, `calibracion_servos.json`, `posicion_motores.json` (en
   instalaciones viejas, los mismos en `raspberry_pi5/`). Para probar o levantar el

@@ -24,6 +24,8 @@ Raspberry. Termina con «Todas bien.» o con lo que falló y por qué.
     test_config     h08/config por tema, sin nombres repetidos
     test_comando    python3 -m h08 y las pruebas guiadas en modo simulado
     test_deploy     los scripts de la Pi
+    test_registro   lo que se anota en el journal: niveles, avisos de las
+                    placas, errores del lazo y el arranque sin terminal
 """
 import argparse
 import os

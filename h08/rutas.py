@@ -5,8 +5,11 @@ Lo que escribe cada tablero (clave, calibración, posición del motor, informes)
 en datos/, fuera del código: una actualización puede reemplazar h08/ entero.
 H08_DATOS cambia esa carpeta (las pruebas usan una temporal) y apaga la mudanza.
 """
+import logging
 import os
 import shutil
+
+log = logging.getLogger(__name__)
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -35,11 +38,13 @@ def datos_viejos(vieja=VIEJA):
     return [n for n in PRIVADOS + ("informes",) if os.path.exists(os.path.join(vieja, n))]
 
 
-def migrar_datos_viejos(vieja=VIEJA, nueva=DATOS, avisar=print):
+def migrar_datos_viejos(vieja=VIEJA, nueva=DATOS, avisar=None):
     """Pasa los datos de raspberry_pi5/ a datos/ sin pisar nada; devuelve los conflictos.
 
     Crea la carpeta nueva si falta. Lo que ya existe en las dos se deja como está y
     se avisa: decide una persona, no el programa. Correrla otra vez no hace nada.
+    Cada movimiento queda en el registro (los conflictos, como AVISO); con avisar,
+    los mensajes van ahí en cambio (lo usan las pruebas).
     """
     os.makedirs(nueva, exist_ok=True)
     if not vieja or not os.path.isdir(vieja):
@@ -49,10 +54,11 @@ def migrar_datos_viejos(vieja=VIEJA, nueva=DATOS, avisar=print):
     def mover(origen, destino):
         if os.path.exists(destino):
             conflictos.append(origen)
-            avisar("[datos] %s quedó sin mover: ya existe %s" % (origen, destino))
+            (avisar or log.warning)("[datos] %s quedó sin mover: ya existe %s"
+                                    % (origen, destino))
             return
         shutil.move(origen, destino)
-        avisar("[datos] movido %s -> %s" % (origen, destino))
+        (avisar or log.info)("[datos] movido %s -> %s" % (origen, destino))
 
     for nombre in PRIVADOS:
         origen = os.path.join(vieja, nombre)

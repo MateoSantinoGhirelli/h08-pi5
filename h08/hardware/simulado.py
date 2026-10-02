@@ -12,7 +12,11 @@ escrituras. Sirve para:
   3. Probar el programa: las pruebas automáticas comparan estos valores.
 """
 
+import logging
+
 from h08.hardware.base import ActuadoresBase
+
+log = logging.getLogger(__name__)
 
 
 class ActuadoresSimulados(ActuadoresBase):
@@ -32,7 +36,7 @@ class ActuadoresSimulados(ActuadoresBase):
         self.valores[self._clave(destino)] = round(angulo_deg, 2)
         self.n_servo += 1
         if self.verboso:
-            print("SERVO %s -> %.1f grados" % (self._clave(destino), angulo_deg))
+            log.info("SERVO %s -> %.1f grados", self._clave(destino), angulo_deg)
 
     def escribir_motor(self, destino, angulo_deg):
         self.valores[self._clave(destino)] = round(angulo_deg, 2)
@@ -42,8 +46,8 @@ class ActuadoresSimulados(ActuadoresBase):
         self.valores[self._clave(destino)] = 1 if encendido else 0
         self.n_led += 1
         if self.verboso:
-            print("LUZ   %s -> %s" % (self._clave(destino),
-                                      "encendida" if encendido else "apagada"))
+            log.info("LUZ   %s -> %s", self._clave(destino),
+                     "encendida" if encendido else "apagada")
 
     def refrescar(self):
         self.n_refresco += 1

@@ -30,11 +30,12 @@ cero y posición guardada.
 import argparse
 import datetime
 import importlib
+import logging
 import os
 import signal
 import sys
 
-from h08 import rutas
+from h08 import registro, rutas
 from h08.config import AERONAVE, TABLERO, MOTOR_CFG
 from h08.simulacion.fallas import CATALOGO
 from h08.simulacion.escenarios import ESCENARIOS
@@ -53,6 +54,8 @@ SUBCOMANDOS = {
     "motor": ("probar_motor", "el motor suelto: sentido, bobinas y cero"),
     "calibrar": ("calibrar_servo", "los extremos reales de un servo"),
 }
+
+log = logging.getLogger("h08")
 
 
 def version():
@@ -77,8 +80,8 @@ def construir_actuadores(simulado, con_motores):
         from h08.hardware.pca9685 import ActuadoresPCA9685
         actuadores = ActuadoresPCA9685(calibracion=rutas.CALIBRACION)
     except (RuntimeError, OSError) as e:
-        print("\n  NO SE PUDO ABRIR EL BUS I2C: %s" % e)
-        print("  El tablero sigue sólo con la página web.\n")
+        log.warning("no se pudo abrir el bus I2C (%s): el tablero sigue sólo con la página web",
+                    e)
         return ActuadoresSimulados()
     if con_motores:
         try:
@@ -87,7 +90,7 @@ def construir_actuadores(simulado, con_motores):
             motores.start()
             actuadores.motores = motores
         except Exception as e:
-            print("\n  SIN MOTORES PASO A PASO: %s\n" % e)
+            log.warning("sin el motor paso a paso de la brújula: %s", e)
     return actuadores
 
 
@@ -187,6 +190,14 @@ def ayuda_subcomandos():
 # ===========================================================================
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
+    # En una consola de Windows los caracteres del QR no entran en su
+    # codificación: se reemplazan en vez de cortar el programa.
+    for flujo in (sys.stdout, sys.stderr):
+        try:
+            flujo.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
+    registro.configurar()
     if argv and argv[0] in SUBCOMANDOS:
         modulo = importlib.import_module("h08.herramientas." + SUBCOMANDOS[argv[0]][0])
         return modulo.main(argv[1:])
@@ -218,13 +229,6 @@ def tablero(argv):
     ap.add_argument("--hoja", metavar="ARCHIVO.html",
                     help="con --qr-admin: además escribe una hoja para imprimir")
     args = ap.parse_args(argv)
-    # En una consola de Windows los caracteres del QR no entran en su
-    # codificación: se reemplazan en vez de cortar el programa.
-    for flujo in (sys.stdout, sys.stderr):
-        try:
-            flujo.reconfigure(errors="replace")
-        except (AttributeError, ValueError):
-            pass
 
     if args.banco:
         args.sin_motores = True
@@ -245,21 +249,19 @@ def tablero(argv):
             print("\n  Hoja para imprimir: %s" % os.path.abspath(args.hoja))
         return 0
 
-    print("=" * 70)
-    print(" TABLERO DIDÁCTICO " + AERONAVE["modelo"] + "   " + version())
-    print(" Matrícula %s  -  %s" % (AERONAVE["matricula"], AERONAVE["serie"]))
-    print("=" * 70)
+    log.info("tablero didáctico %s, %s", AERONAVE["modelo"], version())
+    log.info("matrícula %s, %s", AERONAVE["matricula"], AERONAVE["serie"])
 
     actuadores = construir_actuadores(args.simulado, not args.sin_motores)
 
-    print(" Salida       : " + actuadores.descripcion())
+    log.info("salida: %s", actuadores.descripcion())
     if args.banco:
         imprimir_banco(actuadores)
-    print(" Instrumentos : %d canales" % len(TABLERO))
-    print(" Fallas       : %d   Escenarios: %d" % (len(CATALOGO), len(ESCENARIOS)))
+    log.info("%d canales, %d fallas, %d escenarios", len(TABLERO), len(CATALOGO),
+             len(ESCENARIOS))
     if getattr(actuadores, "motores", None) is not None:
-        print(" Paso a paso  : 28BYJ-48, %.2f pasos por vuelta, hasta %d pasos/s"
-              % (MOTOR_CFG["pasos_por_vuelta"], MOTOR_CFG["vel_max_pps"]))
+        log.info("paso a paso: 28BYJ-48, %.2f pasos por vuelta, hasta %d pasos/s",
+                 MOTOR_CFG["pasos_por_vuelta"], MOTOR_CFG["vel_max_pps"])
 
     nucleo = HiloSimulacion(actuadores, semilla=args.semilla)
     nucleo.start()
@@ -267,12 +269,16 @@ def tablero(argv):
     servidor = servidor_web.crear(nucleo, args.puerto, rutas.ESTATICOS,
                                   donde="la Raspberry",
                                   acceso=None if args.sin_clave else acceso)
-    print(servidor_web.cartel_de_acceso(args.puerto, ancho=70))
+    log.info("página en %s", servidor_web.direccion(args.puerto))
     if args.sin_clave:
-        print("\n  ATENCIÓN: --sin-clave. Cualquiera que abra la página puede operar.")
-    else:
-        print("\n  Para mirar : la dirección de arriba, sin clave.")
-        print("  Para operar: el QR del administrador (python3 -m h08 --qr-admin)")
+        log.warning("--sin-clave: cualquiera que abra la página puede operar")
+    # El dibujo del QR es para una persona frente a la terminal; en el journal
+    # del servicio sería una pared de símbolos.
+    if sys.stdout.isatty():
+        print(servidor_web.cartel_de_acceso(args.puerto, ancho=70))
+        if not args.sin_clave:
+            print("\n  Para mirar : la dirección de arriba, sin clave.")
+            print("  Para operar: el QR del administrador (python3 -m h08 --qr-admin)")
 
     # systemd detiene el servicio con SIGTERM: se lo trata igual que Ctrl+C
     # para que el apagado sea siempre ordenado.
@@ -285,7 +291,7 @@ def tablero(argv):
     except KeyboardInterrupt:
         pass
     finally:
-        print("\nApagando el tablero (luces, servos y motores a cero)...")
+        log.info("apagando el tablero: luces, servos y motores a cero")
         servidor.server_close()
         nucleo.detener()
         nucleo.join(timeout=12.0)
