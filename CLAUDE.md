@@ -35,7 +35,10 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 - Imports absolutos (`from h08.hardware import pca9685`); nada de `sys.path.insert`
   dentro de `h08/`. Toda ruta de archivo sale de `h08/rutas.py`.
 - **Nunca** crear, leer para copiar, ni meter en un zip o en git:
-  `raspberry_pi5/secreto_admin.json`, `calibracion_servos.json`, `posicion_motores.json`.
+  `datos/secreto_admin.json`, `calibracion_servos.json`, `posicion_motores.json` (en
+  instalaciones viejas, los mismos en `raspberry_pi5/`). Para probar o levantar el
+  tablero en la PC, siempre con `H08_DATOS` en una carpeta temporal
+  (`correr_pruebas.py` ya lo hace): así no hay mudanza ni se crea una clave.
 - Los datos del tablero (canales, escalas, calibraciones, barridos, pines, direcciones)
   viven SÓLO en `h08/config/`. No repetirlos en otro archivo.
 - Si una aguja física no cae en su marca, NO se toca la tabla `cal`: las carátulas
@@ -51,7 +54,7 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 - Cambios chicos y de a uno. Antes de tocar varios archivos, proponer un plan.
 - No se puede probar acá: I2C, GPIO, systemd, NetworkManager, Chromium kiosco.
   Eso se prueba en la Pi con `python3 -m h08 diagnostico` y las pruebas guiadas; cuando el
-  usuario traiga un informe de `raspberry_pi5/informes/`, leerlo y corregir desde ahí.
+  usuario traiga un informe de `datos/informes/`, leerlo y corregir desde ahí.
 
 ## Git y GitHub (lo decide el usuario)
 
@@ -70,8 +73,10 @@ y sirve una página web (pantalla de la Pi en modo kiosco + celulares por wifi).
 
 - Un paquete, `h08/`, que se corre con `python3 -m h08` (`h08/__main__.py`: el
   tablero y los subcomandos). `deploy/` tiene los `.sh` de la Pi; `pruebas/`, las
-  pruebas automáticas; `raspberry_pi5/` quedó SÓLO para los datos de cada tablero
-  (clave, calibración, posición del motor, `informes/`), fuera de git y del zip.
+  pruebas automáticas; `datos/` tiene lo que escribe cada tablero (clave,
+  calibración, posición del motor, `informes/`), fuera de git y del zip. Si quedaron
+  datos en `raspberry_pi5/` (versión vieja), el tablero los pasa a `datos/` al
+  arrancar sin pisar nada (`rutas.migrar_datos_viejos`).
 - `h08/config/` (hoy entero en `__init__.py`): el tablero en datos. `TABLERO` (30
   entradas), `BARRIDO`, `ENGRANAJES`, `HORIZONTE`, `PLACAS` (PCA0 0x40, PCA1 0x41),
   `SERVO_CFG` (500–2500 µs), `LUCES_ACTIVAS_EN_BAJO`, `MOTORES`, `ARRANQUE`.

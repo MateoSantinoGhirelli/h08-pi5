@@ -16,7 +16,7 @@ En la Raspberry, la primera vez: descomprimirlo y  bash deploy/instalar.sh
 Las siguientes:                  bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
 
 El zip lleva h08/ (el programa), deploy/ (los scripts de la Pi) y pruebas/.
-No lleva raspberry_pi5/: ahí están los datos de cada tablero.
+No lleva datos/ (ni raspberry_pi5/, donde estaban antes): son de cada tablero.
 
 Tres cuidados que hace solo:
   * NUNCA mete secreto_admin.json, calibracion_servos.json ni
@@ -39,8 +39,8 @@ from h08 import rutas
 AQUI = rutas.RAIZ
 CARPETAS = ("h08", "deploy", "pruebas")
 SUELTOS = ("LEEME.md", "CLAUDE.md", "CONTEXTO_PROYECTO.md", ".claude/settings.json", "empaquetar.py", ".gitignore", ".gitattributes")
-PRIVADOS = {"secreto_admin.json", "calibracion_servos.json", "posicion_motores.json"}
-FUERA_DIR = {"__pycache__", "informes", ".venv", ".git", "dist", ".claude"}
+PRIVADOS = set(rutas.PRIVADOS)
+FUERA_DIR = {"__pycache__", "informes", "datos", ".venv", ".git", "dist", ".claude"}
 FUERA_EXT = (".pyc", ".tmp", ".log", ".zip")
 TEXTO = (".py", ".sh", ".md", ".html", ".svg", ".json", ".txt", ".desktop", ".css", ".js")
 RAIZ_ZIP = "H08_Pi5"

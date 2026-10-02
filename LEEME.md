@@ -92,8 +92,9 @@ sudo reboot
 Después del reinicio: `cd ~/H08_Pi5 && python3 -m h08 diagnostico`.
 
 - `instalar.sh` borra por su cuenta el arranque del kiosco viejo (la línea de `kiosco.sh` en `~/.config/labwc/autostart` y `~/.config/autostart/tablero-kiosco.desktop`) y vuelve a escribir el servicio `tablero-h08` con el comando nuevo.
-- Se genera una **clave del profesor nueva**: hay que volver a imprimir la hoja del QR (`python3 -m h08 --qr-admin --hoja admin.html`).
-- Si había servos calibrados o la brújula tenía su cero ajustado, antes de reinstalar se pueden copiar `calibracion_servos.json` y `posicion_motores.json` de `~/H08_Pi5_viejo/raspberry_pi5/` a `~/H08_Pi5/raspberry_pi5/`. Si no, los servos usan los valores nominales y la brújula arranca en 0°.
+- Se genera una **clave del profesor nueva**: hay que volver a imprimir la hoja del QR (`python3 -m h08 --qr-admin --hoja datos/admin.html`).
+- Si había servos calibrados o la brújula tenía su cero ajustado, antes de correr `instalar.sh` se pueden copiar `calibracion_servos.json` y `posicion_motores.json` de `~/H08_Pi5_viejo/raspberry_pi5/` a `~/H08_Pi5/datos/` (crear la carpeta si no está). Si no, los servos usan los valores nominales y la brújula arranca en 0°.
+- Si en vez de reinstalar limpio la carpeta vieja quedó debajo de la nueva, el tablero pasa solo a `datos/` lo que encuentre en `raspberry_pi5/` la primera vez que arranca, sin pisar nada que ya esté en `datos/`.
 
 ---
 
@@ -165,7 +166,7 @@ Tres agujas existen **sólo en la página**, porque en el tablero no tienen actu
 
 ## Puesta en marcha: las pruebas, en este orden
 
-Todas se corren desde `~/H08_Pi5`. Las pruebas guiadas preguntan «¿se movió?, ¿se encendió?» y guardan un informe con fecha en `raspberry_pi5/informes/`. Casi todas necesitan el servicio detenido, porque manejan las placas directo:
+Todas se corren desde `~/H08_Pi5`. Las pruebas guiadas preguntan «¿se movió?, ¿se encendió?» y guardan un informe con fecha en `datos/informes/`. Casi todas necesitan el servicio detenido, porque manejan las placas directo:
 
 ```
 sudo systemctl stop tablero-h08        # antes
@@ -194,10 +195,10 @@ Las pruebas automáticas del programa (no necesitan hardware) están en `python3
 
   ```
   cd ~/H08_Pi5
-  python3 -m h08 --qr-admin --hoja admin.html
+  python3 -m h08 --qr-admin --hoja datos/admin.html
   ```
 
-  Esa hoja no se pega en la pared. Si se filtra, se genera otra con `python3 -m h08 --renovar-clave`.
+  La hoja va en `datos/`: lo que quede suelto en la carpeta del programa lo borra la próxima actualización. Esa hoja no se pega en la pared. Si se filtra, se genera otra con `python3 -m h08 --renovar-clave`.
 - **Cartel para el público**, con el QR de la red wifi y el de la página: `http://10.55.0.1:8000/cartel`, para imprimir.
 - **Usar el escritorio** de la Raspberry: `bash deploy/kiosco.sh parar`. Para volver al tablero: `bash deploy/kiosco.sh`.
 - **Volver a la red de la escuela:** `sudo bash deploy/punto_de_acceso.sh apagar`. Para volver a la propia: `sudo bash deploy/punto_de_acceso.sh permanente`.
@@ -213,11 +214,12 @@ cd ~/H08_Pi5
 bash deploy/actualizar.sh /media/USUARIO/PENDRIVE/H08_Pi5.zip
 ```
 
-Copia la versión nueva encima de la instalada y guarda antes un respaldo completo. No toca los tres archivos que son de **este** tablero, que están en `raspberry_pi5/`:
+Guarda antes un respaldo completo (`~/H08_respaldo_FECHA`) y deja la carpeta igual a la versión nueva: lo que la versión nueva ya no trae, se borra. No toca la carpeta `datos/`, que es de **este** tablero:
 
 - `secreto_admin.json`, la clave del profesor;
 - `calibracion_servos.json`, lo medido en cada servo;
-- `posicion_motores.json`, dónde quedó la aguja de la brújula.
+- `posicion_motores.json`, dónde quedó la aguja de la brújula;
+- `informes/`, lo que guardaron las pruebas guiadas.
 
 Después reinicia el servicio. **La pantalla de la Raspberry se recarga sola con la versión nueva.** Los celulares la ven al recargar la página.
 
@@ -280,6 +282,7 @@ H08_Pi5/
 │   ├── kiosco.sh             el tablero en la pantalla de la Raspberry
 │   └── punto_de_acceso.sh    la red wifi propia
 ├── pruebas/                  pruebas automáticas, sin hardware
-└── raspberry_pi5/            los datos de ESTE tablero (clave, calibración, posición
-                              del motor, informes); no viaja en el zip
+└── datos/                    los datos de ESTE tablero (clave, calibración, posición
+                              del motor, informes); no viaja en el zip ni se borra
+                              al actualizar
 ```

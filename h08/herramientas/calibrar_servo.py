@@ -36,7 +36,7 @@ USO (con el servicio detenido: sudo systemctl stop tablero-h08)
     python3 -m h08 calibrar PCA0 3 --explorar abajo   busca el tope (Ctrl+C)
 
 En lugar de «PCA0 3» se puede escribir el id del instrumento, por ejemplo
-AIRSPEED. Lo medido queda en raspberry_pi5/calibracion_servos.json, que el
+AIRSPEED. Lo medido queda en datos/calibracion_servos.json, que el
 tablero lee al arrancar. Ese archivo es de ESTE tablero y no se copia a otro.
 """
 

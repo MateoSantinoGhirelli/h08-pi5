@@ -229,6 +229,8 @@ def tablero(argv):
     if args.banco:
         args.sin_motores = True
         args.sin_clave = True
+    # Antes de leer la clave: si siguiera en raspberry_pi5/, Acceso haría una nueva.
+    rutas.migrar_datos_viejos()
     acceso = Acceso(rutas.CLAVE)
 
     if args.renovar:

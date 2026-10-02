@@ -339,8 +339,14 @@ def revisar(eco=True):
 
     # 8 ---------------------------------------------------------------------
     R.titulo("8. ARCHIVOS")
-    R.decir(os.access(rutas.DATOS, os.W_OK), "Se puede escribir en la carpeta de datos (raspberry_pi5)",
-            "la clave, la calibración y la posición del motor se guardan ahí")
+    R.decir(os.access(rutas.DATOS, os.W_OK), "Se puede escribir en la carpeta de datos (%s)" % rutas.DATOS,
+            "la clave, la calibración y la posición del motor se guardan ahí; si no existe, "
+            "la crea el tablero al arrancar (o python3 -m h08 --qr-admin)")
+    pendientes = rutas.datos_viejos()
+    R.decir(not pendientes, "Sin datos viejos en raspberry_pi5/",
+            "quedaron %s: el tablero los pasa a datos/ al arrancar; si siguen ahí es porque "
+            "en datos/ ya había uno con el mismo nombre (elegir cuál va y borrar el otro)"
+            % ", ".join(pendientes))
     R.decir(os.path.exists(rutas.CLAVE),
             "Clave de administrador generada", "python3 -m h08 --qr-admin")
     try:

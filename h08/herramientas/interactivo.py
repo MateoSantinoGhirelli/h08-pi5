@@ -8,7 +8,7 @@ EEST N° 7 - Taller Regional Quilmes
 Lo usan prueba_instrumento.py, prueba_luces_motor.py y prueba_general.py:
 
   * preguntar "¿se movió? ¿se encendió?" y anotar la respuesta;
-  * guardar un informe con fecha en raspberry_pi5/informes/ (rutas.INFORMES);
+  * guardar un informe con fecha en datos/informes/ (rutas.INFORMES);
   * abrir las placas y el motor de verdad, o unos de mentira con --simulado
     (para ver cómo es la prueba en una computadora, sin hardware);
   * llevar un instrumento a un valor de su escala con la misma cuenta que usa

@@ -8,11 +8,15 @@
 #      bash deploy/actualizar.sh /media/$USER/PENDRIVE/H08_Pi5.zip
 #      bash deploy/actualizar.sh /ruta/a/la/carpeta/H08_Pi5
 #
-#  Copia el programa nuevo ENCIMA del instalado, sin tocar lo que es de ESTE
-#  tablero y no viaja en el paquete (está en raspberry_pi5/):
+#  Deja la carpeta igual al paquete nuevo (lo que el paquete ya no trae, se
+#  borra), sin tocar lo que es de ESTE tablero y no viaja en el paquete, que
+#  está en datos/:
 #      secreto_admin.json       la clave del QR del profesor
 #      calibracion_servos.json  lo medido en cada servo
 #      posicion_motores.json    dónde quedó la aguja de la brújula
+#      informes/                lo que guardan las pruebas guiadas
+#  raspberry_pi5/ tampoco se toca: si quedaron datos ahí, el tablero los pasa
+#  a datos/ al arrancar.
 #  Guarda antes una copia de lo instalado (../H08_respaldo_FECHA) y reinicia
 #  el servicio. La pantalla de la Raspberry se recarga sola con la versión
 #  nueva; los celulares, al recargar la página.
@@ -64,7 +68,13 @@ echo "== Deteniendo el tablero (agujas a cero) =="
 sudo systemctl stop "$SERVICIO" 2>/dev/null || true
 
 echo "== Copiando la versión nueva =="
-rsync -a \
+# --delete borra lo que el paquete nuevo ya no trae. Lo excluido no se copia ni
+# se borra: los datos del tablero, un entorno virtual si algún día hace falta
+# (CONTEXTO_PROYECTO.md, 5.3) y la caché de Python.
+rsync -a --delete \
+    --exclude '/datos/' \
+    --exclude '/raspberry_pi5/' \
+    --exclude '/.venv/' \
     --exclude 'secreto_admin.json' \
     --exclude 'calibracion_servos.json' \
     --exclude 'posicion_motores.json' \

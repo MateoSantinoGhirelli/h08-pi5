@@ -36,7 +36,8 @@ set -e
 
 DEPLOY="$(cd "$(dirname "$0")" && pwd)"        # .../H08_Pi5/deploy
 RAIZ="$(dirname "$DEPLOY")"                    # .../H08_Pi5
-DATOS="$RAIZ/raspberry_pi5"                    # el mismo lugar que h08/rutas.py
+DATOS="$RAIZ/datos"                            # el mismo lugar que h08/rutas.py
+VIEJA="$RAIZ/raspberry_pi5"                    # donde estaban los datos antes
 USUARIO="$(id -un)"
 SERVICIO=tablero-h08
 UNIDAD="/etc/systemd/system/$SERVICIO.service"
@@ -91,7 +92,7 @@ quitar_arranque_kiosco
 bash "$DEPLOY/kiosco.sh" parar >/dev/null 2>&1 || true
 VIEJOS=""
 [ -d "$RAIZ/nucleo" ] && VIEJOS="$VIEJOS $RAIZ/nucleo"
-for f in "$DATOS"/*.py "$DATOS"/*.sh "$DATOS/web"; do
+for f in "$VIEJA"/*.py "$VIEJA"/*.sh "$VIEJA/web"; do
     [ -e "$f" ] && VIEJOS="$VIEJOS $f"
 done
 if [ -n "$VIEJOS" ]; then
@@ -134,7 +135,9 @@ sudo usermod -aG i2c,gpio,video "$USUARIO"
 
 echo
 echo "== 4. Clave de administrador =="
+# Al arrancar, el programa pasa a datos/ lo que haya quedado en raspberry_pi5/.
 (cd "$RAIZ" && python3 -m h08 --qr-admin >/dev/null)
+chmod 700 "$DATOS"
 chmod 600 "$DATOS/secreto_admin.json"
 echo "   Generada. Se ve con:  python3 -m h08 --qr-admin"
 

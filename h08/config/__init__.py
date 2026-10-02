@@ -761,7 +761,7 @@ PLACAS = {"PCA0": 0x40, "PCA1": 0x41}
 # ---------------------------------------------------------------------------
 # Valores nominales de la hoja de datos del MG90S. Cada servo puede tener sus
 # propios extremos medidos con calibrar_servo.py; esos quedan guardados en
-# raspberry_pi5/calibracion_servos.json y reemplazan a estos sólo para ese
+# datos/calibracion_servos.json y reemplazan a estos sólo para ese
 # canal.
 SERVO_CFG = {
     "pulso_min_us": 500,    # 0 grados

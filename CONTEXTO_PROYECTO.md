@@ -143,10 +143,12 @@ H08_Pi5/
 │   └── util.py
 ├── deploy/          instalar.sh, actualizar.sh, kiosco.sh, punto_de_acceso.sh
 ├── pruebas/         correr_pruebas.py + 6 pruebas sin hardware
-└── raspberry_pi5/   SÓLO los datos de cada tablero (no está en git ni en el zip):
+└── datos/           lo que escribe cada tablero (no está en git ni en el zip):
                      secreto_admin.json, calibracion_servos.json,
                      posicion_motores.json, informes/
 ```
+(`raspberry_pi5/` sólo aparece en instalaciones viejas: el tablero pasa sus datos a
+`datos/` al arrancar.)
 
 - Tres hilos: simulación a 20 Hz (`simulacion/hilo.py`), motores
   (`hardware/paso_a_paso.py`), servidor HTTP (`ThreadingHTTPServer`, hilo principal).
@@ -182,8 +184,14 @@ solo. Basado en la documentación de Raspberry Pi y en cómo está instalado hoy
   (`os.path.dirname(os.path.abspath(__file__))`); nunca rutas fijas.
 - Se corre como paquete desde esa carpeta: `cd ~/H08_Pi5 && python3 -m h08 ...`.
 - Lo que el programa guarda (clave, calibración, posición del motor, informes)
-  va **dentro de `raspberry_pi5/`** (`rutas.DATOS`), con escritura atómica
+  va **en `datos/`** (`rutas.DATOS`), separado del código, con escritura atómica
   (archivo temporal + `os.replace`). Esos archivos son privados del tablero.
+  `H08_DATOS` cambia esa carpeta (las pruebas usan una temporal); con ella
+  definida no hay mudanza, así nunca se lleva los datos reales.
+- Mudanza: hasta octubre de 2026 los datos estaban en `raspberry_pi5/`. Al
+  arrancar, el tablero los pasa a `datos/` una sola vez, con un mensaje en el
+  registro; si un archivo ya existe en `datos/`, no lo pisa y avisa
+  (`rutas.migrar_datos_viejos`).
 
 ### 5.3 Dependencias
 - **Biblioteca estándar de Python** para todo lo posible (servidor HTTP, I2C con
@@ -266,12 +274,15 @@ Reglas para un programa que corre como servicio:
   clave él): limpia la versión vieja (servicio, `~/.config/labwc/autostart`,
   `tablero-kiosco.desktop`), paquetes, I2C, grupos, clave del profesor, servicio,
   kiosco, wifi. Después, **un reinicio**.
-- `bash deploy/actualizar.sh ZIP`: respaldo completo, para el servicio, `rsync`
-  excluyendo los archivos privados, arranca el servicio. Exige que el servicio ya
-  esté instalado con `python3 -m h08` (desde la versión vieja se reinstala).
+- `bash deploy/actualizar.sh ZIP`: respaldo completo, para el servicio,
+  `rsync --delete` (lo que el paquete ya no trae se borra) excluyendo `datos/`,
+  `raspberry_pi5/`, `.venv/` y los archivos privados, arranca el servicio. Exige
+  que el servicio ya esté instalado con `python3 -m h08` (desde la versión vieja
+  se reinstala). Nada propio se deja suelto en la carpeta del programa: va en
+  `datos/` (por ejemplo, la hoja del QR del profesor).
 - El zip se arma **sólo** con `empaquetar.py` (corre pruebas, excluye privados,
   normaliza LF, escribe VERSION.txt). Lleva `h08/`, `deploy/` y `pruebas/`; no
-  lleva `raspberry_pi5/`.
+  lleva `datos/` ni `raspberry_pi5/`.
 
 ### 5.9 Cómo se verifica en la Pi
 ```
@@ -284,7 +295,7 @@ python3 -m h08 instrumento --todos
 sudo systemctl start tablero-h08
 python3 -m h08 prueba-general          # detiene y arranca el servicio sola
 ```
-Los informes quedan en `raspberry_pi5/informes/`. Cuando el usuario los traiga,
+Los informes quedan en `datos/informes/`. Cuando el usuario los traiga,
 leerlos y separar hardware de código.
 
 ## 6. Cómo se trabaja (en la computadora, con Windows)

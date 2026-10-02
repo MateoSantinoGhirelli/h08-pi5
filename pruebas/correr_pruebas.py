@@ -9,6 +9,8 @@ EEST N° 7 - Taller Regional Quilmes
     python3 pruebas/correr_pruebas.py
 
 No necesita hardware: corre igual en la Raspberry que en una computadora.
+Usa una carpeta de datos temporal (H08_DATOS): no toca la clave, la
+calibración ni la posición del motor de este tablero.
 
     banco_de_pruebas   el simulador: vuelo normal, 8 escenarios, 24 fallas,
                        calibración de cada instrumento y rendimiento
@@ -22,8 +24,10 @@ No necesita hardware: corre igual en la Raspberry que en una computadora.
 """
 
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +42,14 @@ PRUEBAS = [
 
 
 def main():
+    datos = tempfile.mkdtemp(prefix="h08_datos_")
+    try:
+        return correr_todas(datos)
+    finally:
+        shutil.rmtree(datos, ignore_errors=True)
+
+
+def correr_todas(datos):
     resultados = []
     for archivo, args in PRUEBAS:
         print("=" * 70)
@@ -46,7 +58,7 @@ def main():
         t0 = time.monotonic()
         # UTF-8 siempre: en Windows la consola usa otra codificación y los
         # acentos, los QR y las flechas romperían la salida capturada.
-        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", H08_DATOS=datos)
         r = subprocess.run([sys.executable, os.path.join(AQUI, archivo)] + args,
                            capture_output=True, text=True, encoding="utf-8",
                            errors="replace", env=env)
