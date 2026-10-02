@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mando · Tablero H-08</title>
+<!--
+  ===========================================================================
+  mando.html - la botonera del profesor, para el pulgar
+  ===========================================================================
+
+  PARA QUE ES ESTA PAGINA, Y POR QUE ES OTRA
+  El tablero se proyecta en una pantalla grande y el que lo opera lo hace
+  desde el celular, parado adelante del curso. Son dos usos distintos con dos
+  formas distintas: la pantalla proyectada tiene que ser el tablero y nada
+  mas, y el celular tiene que ser botones que se toquen sin mirar.
+
+  Meter las dos cosas en la misma pagina obligaba a que la botonera apareciera
+  proyectada, o a esconderla con un truco. Separandolas, cada una es lo que
+  tiene que ser: /  es el tablero, /mando es la botonera.
+
+  EL MANDO
+  Varios pueden entrar con el QR del profesor, pero uno solo manda a la vez.
+  Esta pagina pregunta cada segundo quien lo tiene: si es otro, muestra el
+  boton de pedirlo; si es este, muestra si alguien lo esta pidiendo. Dos
+  personas metiendo fallas distintas al mismo tiempo no arruinan la seguridad,
+  arruinan la clase.
+
+  LOS BOTONES SON GRANDES A PROPOSITO
+  44 px de alto minimo, que es lo que recomienda cualquier guia de interfaz
+  tactil, y separados. El que opera esto esta hablando, mirando al curso y
+  tocando sin mirar la pantalla.
+-->
+<style>
+ :root{--fondo:#14161a;--panel:#1c2026;--panel2:#232932;--borde:#2b323c;
+       --texto:#e7e9ec;--tenue:#9aa4ae;--acento:#d8a531;--verde:#3f9d6b;
+       --rojo:#c0533f;--ambar:#c9922a}
+ *{box-sizing:border-box}
+ html,body{margin:0;background:var(--fondo);color:var(--texto);
+   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+   -webkit-text-size-adjust:100%}
+ body{padding:0 0 env(safe-area-inset-bottom)}
+
+ header{position:sticky;top:0;z-index:10;background:var(--panel);
+   border-bottom:1px solid var(--borde);padding:.7rem .9rem;
+   display:flex;align-items:center;gap:.6rem}
+ header .t{font-weight:600;font-size:.95rem;letter-spacing:.02em}
+ header .t small{display:block;color:var(--tenue);font-weight:400;font-size:.72rem}
+ .punto{width:9px;height:9px;border-radius:50%;background:#666;flex:none}
+ .punto.ok{background:var(--verde)}
+ .punto.mal{background:var(--rojo)}
+
+ /* el aviso del mando: lo mas importante de la pagina cuando aparece */
+ .mando{padding:.8rem .9rem;font-size:.9rem;line-height:1.45}
+ .mando.tengo{background:#17251c;border-bottom:1px solid #274a34;color:#a9dcc0}
+ .mando.notengo{background:#2a1f16;border-bottom:1px solid #4a3827;color:#e8c79a}
+ .mando.piden{background:#2a2416;border-bottom:1px solid #4a4227;color:#f0dca6}
+ .mando b{color:#fff}
+ .mando .fila{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}
+
+ main{padding:.9rem;display:flex;flex-direction:column;gap:1.1rem;
+   max-width:36rem;margin:0 auto}
+ section h2{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;
+   color:var(--tenue);margin:0 0 .55rem;font-weight:600}
+
+ button{font:inherit;color:var(--texto);background:var(--panel2);
+   border:1px solid var(--borde);border-radius:11px;padding:.85rem .7rem;
+   min-height:52px;cursor:pointer;text-align:center;line-height:1.25}
+ button:active{transform:translateY(1px)}
+ button:disabled{opacity:.35;cursor:not-allowed}
+ button.on{background:var(--acento);color:#1b1403;border-color:var(--acento);
+   font-weight:600}
+ button.chico{min-height:42px;padding:.5rem .8rem;font-size:.88rem}
+ button.peligro{border-color:#5a3128}
+ .rejilla{display:grid;gap:.5rem}
+ .r3{grid-template-columns:repeat(3,1fr)}
+ .r2{grid-template-columns:repeat(2,1fr)}
+
+ /* las listas de fases, escenarios y fallas */
+ .lista{display:flex;flex-direction:column;gap:.4rem;max-height:52vh;
+   overflow-y:auto;-webkit-overflow-scrolling:touch}
+ .it{display:flex;align-items:center;gap:.7rem;background:var(--panel);
+   border:1px solid var(--borde);border-radius:11px;padding:.75rem .8rem;
+   min-height:52px;cursor:pointer}
+ .it:active{background:var(--panel2)}
+ .it .n{background:var(--panel2);border-radius:7px;min-width:26px;height:26px;
+   display:flex;align-items:center;justify-content:center;font-size:.8rem;
+   color:var(--tenue);flex:none}
+ .it b{font-size:.95rem;font-weight:600;display:block}
+ .it .d{color:var(--tenue);font-size:.78rem;margin-top:.15rem;line-height:1.35}
+ .g{color:var(--acento);font-size:.72rem;letter-spacing:.08em;
+   text-transform:uppercase;margin:.5rem 0 .1rem;font-weight:600}
+ .sev{font-size:.66rem;padding:.16rem .45rem;border-radius:5px;flex:none;
+   text-transform:uppercase;letter-spacing:.05em}
+ .sev.baja{background:#243a2c;color:#9fd3b4}
+ .sev.media{background:#3a3324;color:#e0c98d}
+ .sev.alta{background:#3d2620;color:#e8a795}
+
+ .pestanias{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;
+   margin-bottom:.6rem}
+ .estado{background:var(--panel);border:1px solid var(--borde);
+   border-radius:11px;padding:.8rem .9rem;font-size:.88rem;line-height:1.5}
+ .estado b{color:var(--acento)}
+ footer{padding:1.2rem .9rem 2rem;text-align:center;color:var(--tenue);
+   font-size:.78rem;line-height:1.6}
+ footer a{color:var(--tenue)}
+ .nota{color:var(--tenue);font-size:.78rem;line-height:1.5;margin:.5rem 0 0}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="punto" id="conex"></span>
+  <div class="t">MANDO · H-08<small id="sub">conectando…</small></div>
+</header>
+
+<div class="mando" id="avisoMando" style="display:none"></div>
+
+<main>
+  <section>
+    <h2>Qué está pasando</h2>
+    <div class="estado">
+      <div><b id="modotxt">—</b></div>
+      <div id="fasetxt" style="color:var(--tenue)">—</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Elegir</h2>
+    <div class="pestanias">
+      <button class="chico on" id="p1" onclick="pestania(1)">Vuelo</button>
+      <button class="chico" id="p2" onclick="pestania(2)">Accidentes</button>
+      <button class="chico" id="p3" onclick="pestania(3)">Fallas</button>
+    </div>
+    <div class="lista" id="lista"></div>
+  </section>
+
+  <section>
+    <h2>Tiempo</h2>
+    <div class="rejilla r2" style="margin-bottom:.5rem">
+      <button id="bpausa" onclick="orden('pausa', !pausado)">Pausa</button>
+      <button class="peligro" onclick="detener()">Detener</button>
+    </div>
+    <div class="rejilla r3">
+      <button onclick="vel(0.5)" id="v05">0,5×</button>
+      <button onclick="vel(1)" id="v1" class="on">1×</button>
+      <button onclick="vel(4)" id="v4">4×</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tablero</h2>
+    <div class="rejilla r2">
+      <button id="bpiloto" class="on" onclick="piloto()">Piloto reacciona</button>
+      <button id="blamp" onclick="lamparas()">Prueba de lámparas</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ver</h2>
+    <button style="width:100%" onclick="location.href='/'">
+      Ir al tablero &rarr;</button>
+  </section>
+</main>
+
+<footer>
+  <a href="/salir">Cerrar la sesión</a>
+</footer>
+
+<script>
+"use strict";
+// ===========================================================================
+// ESTADO
+// ===========================================================================
+let CAT=null, pausado=false, pilotoON=true, tab=1;
+let tengoMando=false;
+
+const $ = id => document.getElementById(id);
+
+// ===========================================================================
+// ORDENES
+// ---------------------------------------------------------------------------
+// Toda orden puede volver con 403 -no sos administrador- o con 409 -el mando
+// lo tiene otro-. Son dos cosas distintas y se avisan distinto: al primero hay
+// que mandarlo a leer el QR, al segundo a pedir el mando. Tratar los dos como
+// "error" dejaria al profesor mirando una pagina que no hace nada.
+// ===========================================================================
+async function mandar(url){
+  try{
+    const r = await fetch(url, {method:'POST'});
+    if(r.status === 403){ avisar('sesion'); return false; }
+    if(r.status === 409){ tengoMando=false; refrescarMando(); return false; }
+    return r.ok;
+  }catch(e){ return false; }
+}
+
+function orden(a,v){ return mandar('/api/accion/'+a+'?valor='+encodeURIComponent(v)); }
+function ir(m,id){ mandar('/api/modo/'+m+'?id='+encodeURIComponent(id)); }
+function detener(){ mandar('/api/modo/0'); }
+
+function vel(v){
+  orden('velocidad',v);
+  ['v05','v1','v4'].forEach(x=>$(x).classList.remove('on'));
+  $({0.5:'v05',1:'v1',4:'v4'}[v]).classList.add('on');
+}
+// Prueba de lámparas: como el botón PRESS TO TEST de la cabina, enciende
+// las seis luces y se suelta sola a los 5 segundos.
+let timerLamp=null;
+function lamparas(){
+  const b=$('blamp');
+  const prender=!b.classList.contains('on');
+  orden('prueba_luces',prender);
+  b.classList.toggle('on',prender);
+  clearTimeout(timerLamp);
+  if(prender) timerLamp=setTimeout(()=>{ orden('prueba_luces',false);
+                                          b.classList.remove('on'); },5000);
+}
+function piloto(){
+  pilotoON=!pilotoON; orden('piloto_reactivo',pilotoON);
+  const b=$('bpiloto');
+  b.classList.toggle('on', pilotoON);
+  b.textContent = pilotoON ? 'Piloto reacciona' : 'Piloto NO reacciona';
+}
+
+function avisar(que){
+  if(que==='sesion'){
+    document.body.innerHTML =
+      '<div style="padding:3rem 1.5rem;text-align:center;line-height:1.7">'+
+      '<h1 style="font-size:1.2rem">La sesión venció</h1>'+
+      '<p style="color:#9aa4ae">Volvé a leer el código QR del profesor.</p>'+
+      '<p><a style="color:#d8a531" href="/">Ver el tablero</a></p></div>';
+  }
+}
+
+// ===========================================================================
+// EL MANDO
+// ===========================================================================
+async function refrescarMando(){
+  let e;
+  try{ e = await (await fetch('/api/sesion')).json(); }
+  catch(err){ return; }
+
+  if(!e.admin){ avisar('sesion'); return; }
+  tengoMando = e.mando;
+
+  const caja = $('avisoMando');
+  if(e.pedido_ajeno){
+    caja.className = 'mando piden';
+    caja.style.display = '';
+    caja.innerHTML =
+      '<b>Otro dispositivo está pidiendo el mando'+
+      (e.pedido_nombre ? ' ('+esc(e.pedido_nombre)+')' : '')+'.</b><br>'+
+      'Si no contestás, se lo lleva en '+e.pedido_resta+' s.'+
+      '<div class="fila">'+
+      '<button class="chico" onclick="accionMando(\'ceder\')">Cedérselo</button>'+
+      '<button class="chico on" onclick="accionMando(\'rechazar\')">Sigo yo</button>'+
+      '</div>';
+  }else if(e.mando){
+    caja.className = 'mando tengo';
+    caja.style.display = '';
+    caja.innerHTML = '<b>Tenés el mando.</b> ' +
+      (e.admins>1 ? 'Hay '+e.admins+' dispositivos con acceso.' : '');
+  }else if(e.hay_titular){
+    caja.className = 'mando notengo';
+    caja.style.display = '';
+    caja.innerHTML =
+      '<b>El mando lo tiene otro dispositivo'+
+      (e.titular_nombre ? ' ('+esc(e.titular_nombre)+')' : '')+'.</b><br>'+
+      'Podés mirar, pero las órdenes no van a pasar.'+
+      '<div class="fila">'+
+      (e.pedido_mio
+        ? (e.pedido_resta>0
+            ? '<button class="chico" disabled>Pedido… '+e.pedido_resta+' s</button>'
+            : '<button class="chico on" onclick="accionMando(\'tomar\')">Tomar el mando</button>')
+        : '<button class="chico" onclick="accionMando(\'pedir\')">Pedir el mando</button>')+
+      '</div>';
+  }else{
+    caja.className = 'mando tengo';
+    caja.style.display = '';
+    caja.innerHTML = '<b>El mando está libre.</b> La primera orden que des lo toma.';
+  }
+  document.querySelectorAll('main button').forEach(b=>{
+    b.disabled = !(e.mando || e.mando_libre);
+  });
+}
+
+async function accionMando(que){
+  await fetch('/api/mando/'+que, {method:'POST'});
+  refrescarMando();
+}
+
+// ===========================================================================
+// LAS LISTAS
+// ===========================================================================
+function esc(t){
+  return String(t).replace(/[&<>"]/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function pestania(n){
+  tab=n;
+  [1,2,3].forEach(i=>$('p'+i).classList.toggle('on', i===n));
+  dibujarLista();
+}
+
+function dibujarLista(){
+  if(!CAT) return;
+  const L=$('lista');
+  let h='';
+  if(tab===1){
+    h = (CAT.fases||[]).map((f,i)=>
+      `<div class="it" onclick="ir(1,'${esc(f.id)}')"><span class="n">${i+1}</span>
+       <div><b>${esc(f.nombre)}</b><div class="d">${Math.round(f.dur)} s</div></div></div>`
+    ).join('');
+  }else if(tab===2){
+    h = (CAT.escenarios||[]).map(e=>
+      `<div class="it" onclick="ir(2,'${esc(e.id)}')"><div><b>${esc(e.nombre)}</b>
+       <div class="d">${esc(e.resumen||'')}</div></div></div>`
+    ).join('');
+  }else{
+    let sis='';
+    (CAT.fallas||[]).forEach(f=>{
+      if(f.sistema!==sis){ sis=f.sistema; h+=`<div class="g">${esc(sis)}</div>`; }
+      h += `<div class="it" onclick="ir(3,'${esc(f.id)}')">
+            <div style="flex:1"><b>${esc(f.nombre)}</b>
+            <div class="d">${esc((f.sintomas&&f.sintomas[0])||'')}</div></div>
+            <span class="sev ${esc(f.sev)}">${esc(f.sev)}</span></div>`;
+    });
+  }
+  L.innerHTML = h || '<div class="d" style="color:#9aa4ae">Nada para mostrar.</div>';
+}
+
+// ===========================================================================
+// ARRANQUE
+// ===========================================================================
+async function arrancar(){
+  try{
+    CAT = await (await fetch('/api/catalogo')).json();
+    dibujarLista();
+    $('conex').className='punto ok';
+  }catch(e){
+    $('conex').className='punto mal';
+    $('sub').textContent='sin conexión con el tablero';
+    return;
+  }
+  refrescarMando();
+  setInterval(refrescarMando, 1000);
+  setInterval(async ()=>{
+    try{
+      const d = await (await fetch('/api/estado')).json();
+      $('modotxt').textContent = d.modo_nombre || '—';
+      // El nombre de la fase y no su explicacion: el que opera esto ya sabe
+      // que es un acople de embrague, y necesita leerlo de un vistazo
+      // mientras habla. La explicacion larga esta en el tablero.
+      $('fasetxt').textContent = d.fase || d.escenario || '';
+      $('sub').textContent = 't = ' + (d.t||0).toFixed(1) + ' s';
+      pausado = d.pausado;
+      $('bpausa').classList.toggle('on', pausado);
+      $('conex').className='punto ok';
+    }catch(e){ $('conex').className='punto mal'; }
+  }, 500);
+}
+arrancar();
+</script>
+</body>
+</html>

@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablero H-08 · Panel de cabina</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2314171a' stroke='%23a8b48c' stroke-width='2'/%3E%3Cline x1='16' y1='16' x2='16' y2='5' stroke='%23ffffff' stroke-width='2'/%3E%3C/svg%3E">
+
+<!--
+  ==========================================================================
+  PANEL DE CABINA  -  Sikorsky H-19A "H-08"
+  ==========================================================================
+  Este archivo no tiene NINGÚN dato del tablero adentro. Toda la geometría
+  (donde va cada instrumento, que tamaño tiene, que llaves hay en el panel
+  de conmutadores) viaja en /api/catalogo, que la arma nucleo/configuracion.py.
+  Para mover un instrumento se edita configuracion.py, no este archivo.
+
+  COMO DIBUJA
+  --------------------------------------------------------------------------
+  Cada esfera se construye UNA SOLA VEZ al arrancar. Después, en cada cuadro,
+  lo único que se toca es el atributo transform de las agujas. No se vuelve a
+  generar HTML nunca más.
+
+  Además las agujas no saltan de una lectura a la otra: la telemetría llega a
+  5 Hz y un retardo de primer orden las lleva al valor nuevo a 60 Hz, igual
+  que hace el servo real con su propia inercia.
+  ==========================================================================
+-->
+
+<style>
+:root{
+  /* --- interfaz --- */
+  --fondo:#0a0b09; --panel:#161811; --panel2:#20241a; --borde:#333a28;
+  --texto:#e8ead9; --tenue:#98a186; --acento:#d7a93f;
+  --verde:#5fbf72; --amarillo:#e8b93c; --rojo:#e0503c; --ambar:#e89a2c;
+  /* --- chapa del tablero: verde militar --- */
+  --oliva-alto:#616b4e; --oliva:#4c5540; --oliva-bajo:#39412f; --oliva-borde:#282e1e;
+  --negro-sub:#15181b; --grabado:#cdd5b6;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 50% -10%,#1a1d16 0%,#0a0b09 65%);
+     color:var(--texto);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+     font-size:14px;display:flex;flex-direction:column;min-height:100vh}
+
+/* ---------------- encabezado ---------------- */
+header{background:linear-gradient(180deg,#232819,#14170f);border-bottom:1px solid var(--borde);
+       padding:8px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;flex:0 0 auto}
+.marca{font-weight:700;letter-spacing:.5px;font-size:15px}
+.marca small{display:block;font-weight:400;color:var(--tenue);font-size:10.5px;letter-spacing:0}
+.chip{background:var(--panel2);border:1px solid var(--borde);border-radius:999px;
+      padding:3px 11px;font-size:11.5px;color:var(--tenue);white-space:nowrap}
+.chip b{color:var(--texto)}
+.punto{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;
+       background:var(--rojo);vertical-align:middle}
+.punto.on{background:var(--verde);box-shadow:0 0 8px var(--verde)}
+a.vista{color:var(--tenue);text-decoration:none;border:1px solid var(--borde);
+        background:var(--panel2);border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:600}
+a.vista:hover{border-color:var(--acento);color:var(--texto)}
+
+/* ---------------- barra de modos ---------------- */
+.franja{display:flex;flex-wrap:wrap;gap:7px;padding:9px 16px;align-items:center;
+       background:#111309;border-bottom:1px solid var(--borde);flex:0 0 auto}
+.franja button{background:var(--panel2);border:1px solid var(--borde);color:var(--texto);
+     border-radius:8px;padding:7px 13px;font-size:12.5px;cursor:pointer;font-weight:600}
+.franja button:hover{border-color:var(--acento)}
+.franja button.on{background:var(--acento);color:#1b1403;border-color:var(--acento)}
+.franja .sep{width:1px;height:24px;background:var(--borde);margin:0 5px}
+.franja .est{color:var(--tenue);font-size:13px;text-align:left;line-height:1.35}
+/* La franja de la vista publica: dice que modo y que fase corre, para que
+   el que mira sepa que esta viendo sin que nadie se lo explique. */
+.franja .est b{font-size:15px;letter-spacing:.01em}
+.franja a.aMando{background:var(--acento);color:#1b1403;text-decoration:none;
+  font-weight:600;font-size:12px;padding:7px 13px;border-radius:8px;
+  white-space:nowrap;margin-right:8px}
+.franja a.aMando:hover{filter:brightness(1.08)}
+.franja button.soloVista{opacity:.55;font-size:12px}
+.franja button.soloVista:hover{opacity:1}
+.franja .est b{color:var(--texto)}
+
+/* ---------------- menu desplegable ---------------- */
+.menu{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--borde);
+      border-radius:10px;box-shadow:0 16px 46px rgba(0,0,0,.75);max-height:74vh;overflow:auto;
+      width:390px;display:none}
+.menu.abierto{display:block}
+.menu h3{margin:0;padding:10px 13px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;
+         color:var(--tenue);background:var(--panel2);border-bottom:1px solid var(--borde);
+         position:sticky;top:0}
+.menu .it{padding:8px 13px;border-bottom:1px solid #232818;cursor:pointer;
+          display:flex;gap:9px;align-items:flex-start;line-height:1.35}
+.menu .it:hover{background:#232a19}
+.menu .it .n{color:var(--tenue);font-size:11px;min-width:22px;padding-top:2px}
+.menu .it .d{font-size:11px;color:var(--tenue);margin-top:2px}
+.menu .g{padding:6px 13px;font-size:10px;letter-spacing:1px;color:var(--acento);
+         background:#14180e;text-transform:uppercase;font-weight:700}
+.sev{font-size:9.5px;padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap;margin-left:auto}
+.sev.LEVE{background:#25402c;color:#7fd39a}
+.sev.MEDIA{background:#43391c;color:var(--amarillo)}
+.sev.GRAVE{background:#4a2c1c;color:#f0a077}
+.sev.CRITICA{background:#4d1f1f;color:#ff8f7d}
+
+/* =========================================================================
+   EL TABLERO
+   ========================================================================= */
+/* El tablero se dibuja SIEMPRE en su lienzo nominal de 1460 x 680 y después se
+   escala entero. El contenedor .lienzo toma el tamaño ya escalado, así el resto
+   de la página fluye bien y no quedan huecos ni barras de desplazamiento. */
+.marco{flex:1 1 auto;display:flex;justify-content:center;align-items:center;
+       padding:10px 12px 12px;min-height:0;overflow:hidden}
+.lienzo{position:relative;flex:0 0 auto}
+.tablero{position:absolute;left:0;top:0;transform-origin:top left;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.07) 0 2px,rgba(0,0,0,0) 2px),
+    linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.16) 46%,rgba(0,0,0,.34)),
+    radial-gradient(ellipse 85% 70% at 50% -6%,var(--oliva-alto) 0%,var(--oliva) 46%,var(--oliva-bajo) 100%);
+  border:1px solid var(--oliva-borde);border-radius:20px 20px 12px 12px;
+  box-shadow:0 28px 74px rgba(0,0,0,.82), inset 0 2px 0 rgba(255,255,255,.11),
+             inset 0 -4px 14px rgba(0,0,0,.5)}
+/* pintura envejecida: una capa de ruido, dibujada una sola vez por el navegador */
+.tablero::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  opacity:.16;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* luz calida de las luces de tablero */
+.tablero::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  opacity:0;transition:opacity .8s ease;
+  background:radial-gradient(ellipse 70% 55% at 50% 42%,rgba(255,178,72,.16),transparent 72%)}
+.tablero.noche::after{opacity:1}
+
+/* --- regiones --- */
+.zona{position:absolute;pointer-events:none;border-radius:8px}
+.zona.verde{border:1px solid rgba(0,0,0,.30);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 1px 0 rgba(255,255,255,.05)}
+.zona.negro{border:1px solid #0a0c0e;border-radius:10px;
+  background:linear-gradient(180deg,#22262a,#15181b 12%,#101315 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -2px 8px rgba(0,0,0,.7),
+             0 3px 10px rgba(0,0,0,.55)}
+.zona .tit{position:absolute;top:-7px;left:16px;padding:0 8px;white-space:nowrap;
+  font-size:8.5px;letter-spacing:1.7px;color:#c3ccab;font-weight:700;
+  background:var(--oliva);text-shadow:0 1px 0 rgba(0,0,0,.7)}
+.zona.negro .tit{background:#181b1e;color:#aeb8c4}
+
+/* --- chapa de identificación remachada --- */
+.chapa{position:absolute;background:linear-gradient(180deg,#8d9578,#5e6650);
+  border:1px solid #2a301f;border-radius:2px;color:#1a1e12;font-size:7.5px;font-weight:800;
+  letter-spacing:1.4px;padding:2px 7px;text-shadow:0 1px 0 rgba(255,255,255,.28);
+  box-shadow:0 1px 2px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.35);pointer-events:none}
+
+/* --- tornillos --- */
+.torn{position:absolute;width:9px;height:9px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 34% 30%,#9aa287,#4d5440 62%,#2b3122);
+  box-shadow:0 1px 1px rgba(0,0,0,.6), inset 0 0 0 .5px rgba(0,0,0,.5)}
+.torn::after{content:"";position:absolute;left:1.5px;top:3.8px;width:6px;height:1.4px;
+  background:rgba(0,0,0,.6);border-radius:1px}
+
+/* --- instrumentos --- */
+.inst{position:absolute;cursor:help}
+.inst svg{display:block;width:100%;height:100%;filter:drop-shadow(0 5px 10px rgba(0,0,0,.65))}
+.inst .rot{position:absolute;left:-12%;width:124%;top:100%;margin-top:2px;
+  font-size:8px;letter-spacing:.25px;color:#d3dbbc;text-align:center;line-height:1.1;
+  font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:hidden;
+  text-shadow:0 1px 0 rgba(0,0,0,.85)}
+.inst .rot i{color:#98a186;font-style:normal;font-weight:600}
+.inst.sel svg{filter:drop-shadow(0 0 11px rgba(215,169,63,.9))}
+.inst.anom svg{filter:drop-shadow(0 0 11px rgba(224,80,60,.95))}
+
+/* --- luces de alerta --- */
+.luz{position:absolute;border-radius:4px;display:flex;align-items:center;justify-content:center;
+     text-align:center;font-weight:800;font-size:9px;letter-spacing:.7px;cursor:help;
+     white-space:nowrap;overflow:hidden;
+     background:linear-gradient(180deg,#1b1f24,#0e1114);color:#59636f;
+     border:1px solid #2a323c;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+     transition:background .1s, color .1s, box-shadow .1s;overflow:hidden}
+.luz::after{content:"";position:absolute;inset:0;pointer-events:none;
+     background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 2px,transparent 2px 4px)}
+.luz.on.rojo{background:linear-gradient(180deg,#ff6a55,#c8361f);color:#2b0700;
+     box-shadow:0 0 22px rgba(224,80,60,.8),inset 0 1px 0 rgba(255,255,255,.35);border-color:#ff8f7d}
+.luz.on.ambar{background:linear-gradient(180deg,#ffb84d,#d47f13);color:#2b1700;
+     box-shadow:0 0 22px rgba(232,154,44,.8),inset 0 1px 0 rgba(255,255,255,.35);border-color:#ffc978}
+.luz.on.verde{background:linear-gradient(180deg,#5fe08c,#2a9a55);color:#032310;
+     box-shadow:0 0 20px rgba(63,191,111,.75),inset 0 1px 0 rgba(255,255,255,.3);border-color:#8be8ac}
+
+/* --- laminas SVG: conmutadores y chapas de datos ---
+   La raiz de un <svg> captura el mouse en TODO su rectángulo, no solo donde
+   hay dibujo. Como las laminas se superponen entre si y con los instrumentos,
+   se apagan los eventos en la raiz y se encienden solo en los controles. */
+.lamina{position:absolute;display:block;pointer-events:none}
+.lamina .ctl{cursor:help;pointer-events:auto}
+.lamina .ctl:hover .halo{opacity:1}
+
+/* ---------------- info ---------------- */
+.info{flex:0 0 auto;background:#111309;border-top:1px solid var(--borde);padding:9px 16px;
+      display:flex;gap:16px;align-items:center;min-height:62px}
+.info .t{font-weight:700;font-size:13.5px;white-space:nowrap}
+.info .t small{display:block;font-weight:400;color:var(--tenue);font-size:10.5px;font-style:italic}
+.info .d{flex:1;font-size:12px;color:#c6cfb4;line-height:1.45}
+.info .v{text-align:right;white-space:nowrap;font-size:11px;color:var(--tenue);line-height:1.5}
+.info .v b{color:var(--texto);font-size:16px;font-variant-numeric:tabular-nums}
+/* El registro tiene que dar lugar a mensajes largos: los síntomas de cada
+   falla son párrafos, no renglones. Con 64 px entraba un solo mensaje y el
+   resto quedaba cortado sin que se notara. */
+.log{flex:0 0 auto;background:#080906;border-top:1px solid var(--borde);
+     padding:6px 16px;height:96px;overflow:auto;font-size:11.5px;line-height:1.5}
+.log div{padding:2px 0;color:#b9c2a8;overflow-wrap:anywhere}
+.log .ts{color:var(--acento);font-family:ui-monospace,monospace;font-size:10.5px;margin-right:7px}
+
+/* =========================================================================
+   MODO PANTALLA COMPLETA
+   Deja solo el tablero. Sirve para proyectar en el aula o para dejarlo
+   andando en una muestra. Se sale con Escape o con el botón de la esquina.
+   ========================================================================= */
+.salirplena{position:fixed;top:10px;right:12px;z-index:80;display:none;
+  background:rgba(20,24,14,.82);border:1px solid var(--borde);color:var(--tenue);
+  border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
+.salirplena:hover{border-color:var(--acento);color:var(--texto)}
+body.plena > header,
+body.plena > .franja,
+body.plena > .info,
+body.plena > .log{display:none}
+body.plena .marco{padding:0}
+body.plena .salirplena{display:block;opacity:.25;transition:opacity .2s}
+body.plena .salirplena:hover{opacity:1}
+
+/* =========================================================================
+   MODO KIOSCO  (?kiosco=1)
+   Es lo que muestra la pantalla conectada a la Raspberry desde que se
+   enciende. Nadie la opera con mouse: sin puntero, sin botones, y en la
+   esquina los dos QR para que el público entre desde el celular.
+   ========================================================================= */
+body.kiosco{cursor:none}
+body.kiosco #bplena, body.kiosco #aMando{display:none!important}
+.qrk{display:none}
+body.kiosco .qrk{display:flex;position:fixed;right:10px;bottom:8px;z-index:70;gap:10px;
+  background:rgba(12,14,9,.94);border:1px solid var(--borde);border-radius:10px;
+  padding:7px 10px;align-items:center}
+.qrk figure{margin:0;text-align:center;font-size:10px;color:var(--tenue);line-height:1.25}
+.qrk img{width:96px;height:96px;display:block;background:#fff;border-radius:4px;padding:3px;margin:0 auto 3px}
+.qrk b{color:var(--texto);font-size:11px}
+body.kiosco .info, body.kiosco .log{padding-right:260px}
+@media (max-height: 620px){ body.kiosco .qrk img{width:70px;height:70px} }
+
+/* =========================================================================
+   PANTALLAS CHICAS Y BAJAS
+   El tablero es cuatro veces más ancho que alto: lo que escasea siempre es
+   la ALTURA. Estas reglas le sacan altura al resto para dársela al tablero.
+   ========================================================================= */
+@media (max-height: 780px){
+  .log{height:58px;padding:4px 12px;font-size:11px}
+  .info{min-height:52px;padding:6px 12px}
+  header{padding:5px 12px}
+  .franja{padding:6px 12px}
+}
+@media (max-height: 620px){
+  .log{display:none}
+  .info{min-height:44px;padding:5px 12px;gap:10px}
+  .info .d{font-size:11px;line-height:1.3}
+}
+@media (max-width: 900px){
+  header{gap:6px;padding:6px 10px}
+  .marca{font-size:13px}
+  .marca small{display:none}
+  .chip{padding:2px 8px;font-size:10.5px}
+  /* Los botones pasan a UNA sola fila que se desplaza de costado. Si se los
+     deja envolver, cada fila nueva le come 34 px de alto al tablero. */
+  .franja{gap:5px;padding:6px 10px;flex-wrap:nowrap;overflow-x:auto;
+         scrollbar-width:none;-ms-overflow-style:none}
+  .franja::-webkit-scrollbar{display:none}
+  .franja button{padding:6px 9px;font-size:11.5px;flex:0 0 auto}
+  .franja .sep{flex:0 0 auto}
+  .franja .est{width:100%;margin-left:0;text-align:left;order:9;font-size:10.5px;
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+  .franja .est br{display:none}
+  .franja .est b::after{content:" · ";color:var(--tenue)}
+  .marco{padding:6px 6px 8px}
+  .info{flex-wrap:wrap;gap:8px}
+  .info .d{flex-basis:100%;order:3}
+  .menu{width:calc(100vw - 24px)}
+}
+@media (max-width: 620px){
+  .info .t small{display:none}
+  .franja button{padding:6px 8px;font-size:11px}
+  #bplena{display:none}
+}
+/* Celular acostado: la altura es lo único que importa. Se deja el encabezado,
+   una fila de botones y la barra de información mínima. Todo lo demás fuera. */
+@media (max-height: 500px){
+  header{padding:4px 10px}
+  .franja{padding:4px 10px}
+  .franja .est{display:none}
+  .info{min-height:0;padding:4px 10px}
+  .info .d{display:none}
+  .info .t{font-size:12px}
+  .marco{padding:4px 4px 6px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">SIKORSKY H-19A <span style="color:var(--acento)">H-08</span>
+    <small id="ficha">c/n 55-135 · Fuerza Aérea Argentina</small></div>
+  <div style="flex:1"></div>
+  <span class="chip"><span class="punto" id="conex"></span><span id="conextxt">conectando</span></span>
+  <span class="chip">MODO <b id="modotxt">-</b></span>
+  <span class="chip">T <b id="ttxt">0.0</b> s</span>
+
+</header>
+
+<!-- Esta pagina es para MIRAR. No tiene un solo control del simulador, y no
+     porque esten escondidos: no estan. El control vive en /mando, que pide la
+     clave del QR del profesor, y el servidor rechaza cualquier orden que no
+     venga de ahi. Ver nucleo/acceso.py.
+     Lo unico que queda es pantalla completa, que no toca el tablero: cambia
+     la pantalla del que mira, que para eso es suya. -->
+<div class="franja">
+  <div class="est"><b id="fasetxt">—</b><br><span id="fasedesc"></span></div>
+  <div style="flex:1"></div>
+  <!-- Solo lo ve el administrador. No es una proteccion -el servidor rechaza
+       igual cualquier orden que no venga de una sesion de admin-, es que un
+       visitante no tiene por que ver un boton que lo lleva a una puerta
+       cerrada. -->
+  <a class="aMando" id="aMando" href="/mando" style="display:none"
+     title="Tecla M">Mando &rarr;</a>
+  <button class="soloVista" onclick="pantallaCompleta(true)" id="bplena"
+          title="Tecla F">⛶ Pantalla completa</button>
+</div>
+
+<div class="marco" id="marco">
+  <div class="lienzo" id="lienzo"><div class="tablero" id="tablero"></div></div>
+</div>
+<button class="salirplena" id="salirplena" onclick="pantallaCompleta(false)"
+        title="Salir de pantalla completa (Esc)">✕ Salir</button>
+
+<div class="info">
+  <div class="t" id="itit">Tocá cualquier instrumento<small>o una llave del panel izquierdo</small></div>
+  <div class="d" id="ides">Cada uno te dice qué mide y para qué sirve. Mirar no cambia nada de lo que están viendo los demás.</div>
+  <div class="v" id="ival"></div>
+</div>
+
+<div class="log" id="log"></div>
+<!-- Sólo en el modo kiosco: los QR para entrar desde el celular. -->
+<div class="qrk" id="qrk">
+  <figure><img src="/qr_wifi.svg" alt=""><b>1.</b> Wifi<br><span id="qrkred">Tablero-H08</span></figure>
+  <figure><img src="/qr.svg" alt="" id="qrkurl"><b>2.</b> Tablero<br><span id="qrkdir"></span></figure>
+</div>
+
+<script>
+"use strict";
+// ===========================================================================
+// ESTADO GLOBAL
+// ===========================================================================
+let CAT=null, EST=null, pausado=false, lampON=false, pilotoON=true;
+// Opciones de la dirección:
+//   ?kiosco=1          la pantalla conectada a la Raspberry (la abre sola al
+//                      encender): sin puntero, con los QR para entrar desde el
+//                      celular y recarga sola cuando el tablero se reinicia
+//                      (así siempre muestra la última versión instalada)
+//   ?esferas=viejas    las esferas dibujadas de antes, sin las carátulas
+const MODO=(()=>{
+  const q=new URLSearchParams(location.search);
+  return {kiosco:q.get('kiosco')==='1', esferas_viejas:q.get('esferas')==='viejas'};
+})();
+if(MODO.kiosco) document.body.classList.add('kiosco');
+let timerPoll=null, fijado=null;
+let LIENZO=[1460,680];
+
+// Elementos que cambian en cada cuadro. Se llenan una sola vez, al construir.
+//   DIN : atributos animados con retardo   {el, attr, fmt, get, circ, a}
+//   TXT : textos y clases, a la tasa de la telemetría
+const DIN=[], TXT=[];
+let vistos=new Set();          // claves de mensajes ya volcados al registro
+
+// ===========================================================================
+// GEOMETRÍA DE ESFERAS  (lienzo de 200 x 200 para todas)
+// ===========================================================================
+const C=100;
+function pol(a,r){const t=(a-90)*Math.PI/180;return [C+r*Math.cos(t), C+r*Math.sin(t)];}
+function arco(r,a0,a1){
+  const [x0,y0]=pol(a0,r),[x1,y1]=pol(a1,r);
+  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${(a1-a0)>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+const COLOR={verde:'#2f9e57',amarillo:'#d8a72c',rojo:'#cf3b28'};
+
+// Interpolación de la MISMA tabla de calibración que usa el servo, para que
+// la esfera dibujada tenga exactamente la no linealidad del instrumento real.
+function interp(x,t){
+  if(!t||!t.length) return 0;
+  if(x<=t[0][0]) return t[0][1];
+  if(x>=t[t.length-1][0]) return t[t.length-1][1];
+  let i=1; while(i<t.length && t[i][0]<x) i++;
+  const [x0,y0]=t[i-1],[x1,y1]=t[i];
+  return x1===x0 ? y1 : y0+(y1-y0)*(x-x0)/(x1-x0);
+}
+function luzEncendida(s){ return !!(s && ((typeof s.ang==='number')?s.ang:s.v)>=0.5); }
+function V(id){ const s=EST&&EST.instrumentos?EST.instrumentos[id]:null; return s?s.v:0; }
+
+// ===========================================================================
+// CONFIGURACIÓN DE DIBUJO POR INSTRUMENTO
+//   inicio  : ángulo de esfera donde arranca la escala (0 = arriba)
+//   barrido : cuantos grados ocupa el recorrido completo
+//   mayor   : paso entre números rotulados      menor : paso entre marcas
+// ===========================================================================
+const ESFERA = {
+  AIRSPEED:       {inicio:-150,barrido:300,mayor:20,menor:10,tit:'AIRSPEED',sub:'KNOTS'},
+  ALTIMETER:      {tit:'ALTITUDE',sub:'FEET'},
+  VSI:            {inicio:-150,barrido:300,mayor:500,menor:250,tit:'VERTICAL SPEED',
+                   sub:'100 FT / MIN', f:v=>Math.abs(v/100)},
+  TACH_ENG:       {inicio:-135,barrido:270,tit:'DUAL TACHOMETER',sub:'RPM'},
+  TURN:           {tit:'TURN & SLIP',sub:'2 MIN'},
+  COMPASS:        {tit:'COMPASS',sub:''},
+  VOR_CDI:        {tit:'AN/ARN-14',sub:'COURSE'},
+  CLOCK:          {tit:'CLOCK',sub:'ELAPSED'},
+  ATT_ROLL:       {tit:'ATTITUDE',sub:''},
+  MAP:            {inicio:-135,barrido:270,mayor:10,menor:2,tit:'MANIFOLD',sub:'IN. HG'},
+  OIL_PRESS:      {inicio:-135,barrido:270,mayor:50,menor:10,tit:'OIL',sub:'PRESS PSI'},
+  OIL_TEMP:       {inicio:-135,barrido:270,mayor:20,menor:10,tit:'OIL',sub:'TEMP °C'},
+  CHT:            {inicio:-135,barrido:270,mayor:100,menor:50,tit:'CYL HEAD',sub:'TEMP °C'},
+  FUEL_PRESS:     {inicio:-135,barrido:270,mayor:5,menor:1,tit:'FUEL',sub:'PRESS PSI'},
+  CARB_AIR_TEMP:  {inicio:-135,barrido:270,mayor:25,menor:5,tit:'CARB AIR',sub:'TEMP °C'},
+  XMSN_OIL_PRESS: {inicio:-135,barrido:270,mayor:25,menor:5,tit:'XMSN',sub:'PRESS PSI'},
+  XMSN_OIL_TEMP:  {inicio:-135,barrido:270,mayor:50,menor:10,tit:'XMSN',sub:'TEMP °C'},
+  FUEL_QTY_FWD:   {inicio:-135,barrido:270,mayor:94.5,menor:47.25,tit:'FUEL FWD',sub:'TANQUE DEL.',
+                   f:v=>['E','1/4','1/2','3/4','F'][Math.round(v/94.5)]||''},
+  FUEL_QTY_AFT:   {inicio:-135,barrido:270,mayor:80.5,menor:40.25,tit:'FUEL AFT',sub:'TANQUE TRAS.',
+                   f:v=>['E','1/4','1/2','3/4','F'][Math.round(v/80.5)]||''},
+  AMMETER:        {inicio:-135,barrido:270,mayor:50,menor:25,tit:'AMMETER',sub:'AMPERES'},
+  VOLTMETER:      {inicio:-135,barrido:270,mayor:8,menor:2,tit:'VOLTMETER',sub:'DC VOLTS'}
+};
+// Nombre corto para el rótulo grabado bajo cada instrumento.
+const CORTO={
+  OIL_PRESS:'Pres. aceite', OIL_TEMP:'Temp. aceite', CHT:'Temp. culata',
+  FUEL_PRESS:'Pres. combust.', CARB_AIR_TEMP:'Aire carburador',
+  XMSN_OIL_PRESS:'Pres. transm.', XMSN_OIL_TEMP:'Temp. transm.',
+  FUEL_QTY_FWD:'Combust. del.', FUEL_QTY_AFT:'Combust. tras.',
+  AMMETER:'Amperímetro', VOLTMETER:'Voltímetro',
+  AIRSPEED:'Velocímetro', ATT_ROLL:'Horizonte artificial', ALTIMETER:'Altímetro',
+  TURN:'Viraje y ladeo', TACH_ENG:'Tacómetro doble', VSI:'Variómetro',
+  CLOCK:'Reloj de cabina', COMPASS:'Brújula giroscópica', VOR_CDI:'Rumbo AN/ARN-14',
+  MAP:'Presión de admisión'
+};
+
+// ---------------------------------------------------------------------------
+// PIEZAS COMUNES DE UNA ESFERA
+// ---------------------------------------------------------------------------
+function defs(id){
+  return `<defs>
+    <radialGradient id="cara${id}" cx="42%" cy="34%" r="78%">
+      <stop offset="0%" stop-color="#1b1f22"/><stop offset="62%" stop-color="#0d1012"/>
+      <stop offset="100%" stop-color="#050607"/></radialGradient>
+    <linearGradient id="bis${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#767e63"/><stop offset="42%" stop-color="#454c38"/>
+      <stop offset="100%" stop-color="#242a1b"/></linearGradient>
+    <linearGradient id="vid${id}" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".20"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity=".03"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+  </defs>`;
+}
+// Bisel pintado de verde militar, con sus cuatro tornillos de montaje.
+function bisel(id){
+  let s=`<circle cx="100" cy="100" r="99" fill="url(#bis${id})"/>
+         <circle cx="100" cy="100" r="90" fill="#0a0c0d"/>
+         <circle cx="100" cy="100" r="87" fill="url(#cara${id})" stroke="#232922" stroke-width="1"/>`;
+  for(const a of [45,135,225,315]){
+    const [x,y]=pol(a,94.5);
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.1" fill="#2a3022" stroke="#7d876a" stroke-width=".7"/>`;
+  }
+  return s;
+}
+function vidrio(id){
+  return `<ellipse cx="74" cy="60" rx="52" ry="34" fill="url(#vid${id})" transform="rotate(-30 74 60)" pointer-events="none"/>
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="3"/>`;
+}
+// El rótulo va abajo de todo, entre el último número de la escala y el borde.
+// Si se sube más, se superpone con los números: es el error clásico al dibujar
+// un instrumento redondo de 270 o 300 grados de barrido.
+function rotulo(tit,sub,yb){
+  yb = yb || 158;
+  let s=`<text x="100" y="${yb}" text-anchor="middle" font-size="9.5" fill="#9aa78c"
+          font-weight="700" letter-spacing="1">${tit}</text>`;
+  if(sub) s+=`<text x="100" y="${yb+11}" text-anchor="middle" font-size="7" fill="#6b7360"
+          letter-spacing="1.3">${sub}</text>`;
+  return s;
+}
+// Aguja: se dibuja SIEMPRE apuntando arriba. El ángulo lo pone el animador en
+// el atributo transform del grupo, que es lo único que se toca por cuadro.
+function aguja(cls,largo,color,ancho,cola){
+  cola=cola||18;
+  return `<g class="${cls}" transform="rotate(0 100 100)">
+    <polygon points="100,${100-largo} ${100-ancho},${100-largo*0.28} ${100-ancho*0.55},${100+cola} ${100+ancho*0.55},${100+cola} ${100+ancho},${100-largo*0.28}"
+      fill="${color}" stroke="#000" stroke-opacity=".45" stroke-width=".6"/></g>`;
+}
+function hub(){
+  return `<circle cx="100" cy="100" r="7.5" fill="#2d3428" stroke="#6e7860" stroke-width="1"/>
+          <circle cx="100" cy="100" r="3" fill="#0c0f0b"/>`;
+}
+// Descriptor de elemento animado.
+function D(cls,get,fmt,circ){ return {cls,get,fmt,circ:!!circ}; }
+const ROT = a => `rotate(${a.toFixed(2)} 100 100)`;
+
+// ---------------------------------------------------------------------------
+// ESFERA COMÚN DE UNA AGUJA
+// ---------------------------------------------------------------------------
+function dialAguja(it){
+  const e=ESFERA[it.id]||{inicio:-135,barrido:270,mayor:(it.max-it.min)/5,menor:(it.max-it.min)/10};
+  const cal=it.cal||[];
+  const a0=cal.length?cal[0][1]:0, a1=cal.length?cal[cal.length-1][1]:180;
+  const span=(a1-a0)||180;
+  const ang=v=>e.inicio+((interp(v,cal)-a0)/span)*e.barrido;
+  const fmt=e.f||(v=>Math.round(v));
+
+  let s=defs(it.id)+bisel(it.id);
+  (it.arcos||[]).forEach(a=>{
+    const p0=ang(a[0]), p1=ang(a[1]);
+    if(p1-p0>0.6) s+=`<path d="${arco(76,p0,p1)}" stroke="${COLOR[a[2]]||'#555'}"
+       stroke-width="7" fill="none" stroke-linecap="butt"/>`;
+  });
+  const men=e.menor||((it.max-it.min)/10);
+  for(let v=it.min; v<=it.max+1e-6; v+=men){
+    const a=ang(v); const [x0,y0]=pol(a,70),[x1,y1]=pol(a,64);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="#8d99a8" stroke-width="1.3"/>`;
+  }
+  const may=e.mayor||((it.max-it.min)/5);
+  for(let v=it.min; v<=it.max+1e-6; v+=may){
+    const a=ang(v); const [x0,y0]=pol(a,70),[x1,y1]=pol(a,58),[tx,ty]=pol(a,42);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="#e6ecf4" stroke-width="2.6" stroke-linecap="round"/>
+        <text x="${tx.toFixed(1)}" y="${(ty+4.8).toFixed(1)}" text-anchor="middle" font-size="14"
+        fill="#e9eff6" font-weight="600">${fmt(v)}</text>`;
+  }
+  s+=rotulo(e.tit||it.id, e.sub||it.unidad, (it.tam>=140)?168:158);
+  s+=aguja('d1',68,'#f4f8fd',4.6);
+  s+=hub()+vidrio(it.id);
+  return {svg:s, din:[ D('d1', ()=>ang(V(it.id)), ROT) ]};
+}
+
+// ---------------------------------------------------------------------------
+// TACÓMETRO DOBLE  (dos agujas concéntricas, dos escalas)
+// ---------------------------------------------------------------------------
+function dialTacometro(it){
+  const inicio=-135, barrido=270;
+  const angE=v=>inicio+(Math.min(Math.max(v,0),3500)/3500)*barrido;
+  const angR=v=>inicio+(Math.min(Math.max(v,0),350)/350)*barrido;
+  let s=defs('TAC')+bisel('TAC');
+  // arco del ROTOR bien adentro, para no confundirlo con el del motor
+  s+=`<path d="${arco(41,angR(170),angR(245))}" stroke="${COLOR.verde}" stroke-width="5" fill="none"/>`;
+  s+=`<path d="${arco(41,angR(0),angR(170))}" stroke="${COLOR.rojo}" stroke-width="2.5" fill="none" stroke-opacity=".7"/>`;
+  s+=`<path d="${arco(41,angR(245),angR(350))}" stroke="${COLOR.rojo}" stroke-width="2.5" fill="none" stroke-opacity=".7"/>`;
+  s+=`<path d="${arco(78,angE(1200),angE(2250))}" stroke="${COLOR.verde}" stroke-width="5" fill="none"/>`;
+  s+=`<path d="${arco(78,angE(2250),angE(3500))}" stroke="${COLOR.rojo}" stroke-width="5" fill="none"/>`;
+  for(let n=0;n<=35;n+=1){
+    const a=angE(n*100);
+    if(n%5===0){
+      const [x0,y0]=pol(a,72),[x1,y1]=pol(a,62),[tx,ty]=pol(a,50);
+      s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+          stroke="#eef3f9" stroke-width="2.4" stroke-linecap="round"/>
+          <text x="${tx.toFixed(1)}" y="${(ty+4.5).toFixed(1)}" text-anchor="middle" font-size="13"
+          fill="#f0f5fa" font-weight="700">${n}</text>`;
+    }else{
+      const [x0,y0]=pol(a,72),[x1,y1]=pol(a,67);
+      s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+          stroke="#96a2b1" stroke-width="1.1"/>`;
+    }
+  }
+  for(let n=0;n<=300;n+=100){
+    const a=angR(n),[tx,ty]=pol(a,28);
+    s+=`<text x="${tx.toFixed(1)}" y="${(ty+3).toFixed(1)}" text-anchor="middle" font-size="8"
+        fill="#f0a24a" font-weight="700">${n}</text>`;
+  }
+  s+=rotulo('DUAL TACHOMETER','ENG ×100  ·  ROTOR RPM',168);
+  s+=aguja('dr',56,'#ff9f38',4.2);     // rotor: naranja, corta
+  s+=aguja('de',74,'#f4f8fd',4.0);     // motor: blanca, larga, encima
+  s+=hub()+vidrio('TAC');
+  return {svg:s, din:[ D('dr',()=>angR(V('TACH_ROT')),ROT),
+                       D('de',()=>angE(V('TACH_ENG')),ROT) ]};
+}
+
+// ---------------------------------------------------------------------------
+// ALTÍMETRO de tres agujas
+// ---------------------------------------------------------------------------
+function dialAltimetro(it){
+  let s=defs('ALT')+bisel('ALT');
+  for(let n=0;n<=9;n++){
+    const a=n*36;
+    const [x0,y0]=pol(a,72),[x1,y1]=pol(a,60),[tx,ty]=pol(a,43);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="#eef3f9" stroke-width="2.8" stroke-linecap="round"/>
+        <text x="${tx.toFixed(1)}" y="${(ty+5.6).toFixed(1)}" text-anchor="middle" font-size="16"
+        fill="#f0f5fa" font-weight="700">${n}</text>`;
+    for(let m=1;m<5;m++){
+      const b=a+m*7.2; const [u0,v0]=pol(b,72),[u1,v1]=pol(b,67);
+      s+=`<line x1="${u0.toFixed(1)}" y1="${v0.toFixed(1)}" x2="${u1.toFixed(1)}" y2="${v1.toFixed(1)}"
+          stroke="#96a2b1" stroke-width="1.1"/>`;
+    }
+  }
+  s+=`<rect x="119" y="92" width="42" height="16" rx="2" fill="#05080b" stroke="#4c5763" stroke-width="1"/>
+      <text x="140" y="104" text-anchor="middle" font-size="10" fill="#7fd39a"
+      font-family="ui-monospace,monospace">1013</text>`;
+  s+=rotulo('ALTIMETER','',168);
+  s+=`<g class="da" transform="rotate(0 100 100)">
+      <polygon points="100,26 95,40 105,40" fill="#cfd8e3" stroke="#000" stroke-opacity=".4" stroke-width=".5"/></g>`;
+  s+=aguja('db',44,'#e8eef6',6.2);     // miles
+  s+=aguja('dc',74,'#f4f8fd',3.4);     // centenas
+  s+=hub()+vidrio('ALT');
+  const A=()=>V('ALTIMETER');
+  return {svg:s, din:[ D('da',()=>(A()/10000%10)*36,ROT,true),
+                       D('db',()=>(A()/1000%10)*36,ROT,true),
+                       D('dc',()=>(A()/100%10)*36,ROT,true) ]};
+}
+
+// ---------------------------------------------------------------------------
+// HORIZONTE ARTIFICIAL
+//   grupo externo = alabeo (rotate)   ·   grupo interno = cabeceo (translate)
+// ---------------------------------------------------------------------------
+const PX_GRADO=2.1;
+function dialHorizonte(it){
+  let s=defs('ATT')+bisel('ATT');
+  s+=`<clipPath id="cH"><circle cx="100" cy="100" r="72"/></clipPath>`;
+  s+=`<g clip-path="url(#cH)"><g class="dh" transform="rotate(0 100 100)">
+      <g class="dp" transform="translate(0 0)">
+      <rect x="-90" y="-200" width="380" height="300" fill="#2b7bbf"/>
+      <rect x="-90" y="100" width="380" height="300" fill="#8a5a2b"/>
+      <line x1="-90" y1="100" x2="290" y2="100" stroke="#ffffff" stroke-width="2"/>`;
+  for(const g of [-30,-20,-10,10,20,30]){
+    const y=100+g*PX_GRADO, w=(g%20===0)?30:17;
+    s+=`<line x1="${100-w}" y1="${y.toFixed(1)}" x2="${100+w}" y2="${y.toFixed(1)}"
+        stroke="#e8eef6" stroke-width="1.4"/>`;
+    if(g%20===0) s+=`<text x="${100-w-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="7"
+        fill="#e8eef6">${Math.abs(g)}</text>`;
+  }
+  s+=`</g></g></g>`;
+  s+=`<circle cx="100" cy="100" r="72" fill="none" stroke="#39414d" stroke-width="2"/>`;
+  for(const g of [-60,-45,-30,-20,-10,0,10,20,30,45,60]){
+    const [x0,y0]=pol(g,72),[x1,y1]=pol(g,(Math.abs(g)%30===0)?62:66);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="#d7dfe9" stroke-width="${Math.abs(g)%30===0?2:1.2}"/>`;
+  }
+  s+=`<g class="di" transform="rotate(0 100 100)"><polygon points="100,30 94,42 106,42" fill="#ffce4a"/></g>`;
+  s+=`<polygon points="100,24 95,15 105,15" fill="#e8eef6"/>`;
+  s+=`<g stroke="#ffce4a" stroke-width="3.4" fill="none" stroke-linecap="round">
+      <line x1="58" y1="100" x2="86" y2="100"/><line x1="114" y1="100" x2="142" y2="100"/></g>
+      <circle cx="100" cy="100" r="3.4" fill="#ffce4a"/>`;
+  s+=vidrio('ATT');
+  const R=()=>-V('ATT_ROLL');
+  return {svg:s, din:[ D('dh',R,ROT), D('di',R,ROT),
+                       D('dp',()=>V('ATT_PITCH')*PX_GRADO, y=>`translate(0 ${y.toFixed(2)})`) ]};
+}
+
+// ---------------------------------------------------------------------------
+// VIRAJE Y LADEO
+// ---------------------------------------------------------------------------
+function dialViraje(it){
+  let s=defs('TRN')+bisel('TRN');
+  for(const g of [-18,18]){
+    const [x0,y0]=pol(g,66),[x1,y1]=pol(g,52);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="#e8eef6" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  s+=`<line x1="100" y1="34" x2="100" y2="48" stroke="#96a2b1" stroke-width="2"/>`;
+  s+=`<text x="62" y="52" font-size="9" fill="#9aa7b8" font-weight="700">L</text>`;
+  s+=`<text x="132" y="52" font-size="9" fill="#9aa7b8" font-weight="700">R</text>`;
+  s+=`<text x="100" y="70" text-anchor="middle" font-size="7" fill="#7c8794" letter-spacing="1">2 MIN TURN</text>`;
+  s+=`<g class="dt" transform="rotate(0 100 100)">
+      <line x1="100" y1="102" x2="100" y2="40" stroke="#f4f8fd" stroke-width="4" stroke-linecap="round"/>
+      <line x1="83" y1="52" x2="117" y2="52" stroke="#f4f8fd" stroke-width="3.4" stroke-linecap="round"/>
+      <line x1="100" y1="52" x2="100" y2="62" stroke="#f4f8fd" stroke-width="3" stroke-linecap="round"/></g>`;
+  s+=`<path d="M 62 132 Q 100 150 138 132" stroke="#39414d" stroke-width="15" fill="none" stroke-linecap="round"/>
+      <path d="M 62 132 Q 100 150 138 132" stroke="#0a0e13" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+  s+=`<line x1="93" y1="136" x2="93" y2="146" stroke="#c8d2de" stroke-width="1.2"/>
+      <line x1="107" y1="136" x2="107" y2="146" stroke="#c8d2de" stroke-width="1.2"/>`;
+  s+=`<g class="db" transform="translate(0 0)">
+      <circle cx="100" cy="141" r="5.4" fill="#1a1f27" stroke="#7c8794" stroke-width=".8"/>
+      <circle cx="98.4" cy="139.2" r="1.7" fill="#8e99a8" opacity=".6"/></g>`;
+  s+=`<text x="100" y="168" text-anchor="middle" font-size="8.5" fill="#9aa78c" font-weight="700"
+      letter-spacing="1">TURN &amp; SLIP</text>`;
+  s+=hub()+vidrio('TRN');
+  // la bola cae por gravedad: se desplaza en x y sube un poco por el tubo
+  const bola=b=>`translate(${(b*32).toFixed(2)} ${(-Math.abs(b)*7).toFixed(2)})`;
+  return {svg:s, din:[
+    D('dt',()=>Math.max(-30,Math.min(30,V('TURN')*6)),ROT),
+    D('db',()=>Math.max(-1,Math.min(1,V('SLIP'))),bola) ]};
+}
+
+// ---------------------------------------------------------------------------
+// BRÚJULA GIROSCÓPICA (tarjeta giratoria)
+// ---------------------------------------------------------------------------
+function dialBrujula(it){
+  let s=defs('CMP')+bisel('CMP');
+  s+=`<g class="dg" transform="rotate(0 100 100)">`;
+  for(let n=0;n<36;n++){
+    const a=n*10, g=n*10;
+    const [x0,y0]=pol(a,74),[x1,y1]=pol(a,(n%3===0)?62:68);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="#d7dfe9" stroke-width="${n%3===0?2.2:1.1}"/>`;
+    if(n%3===0){
+      const [tx,ty]=pol(a,50);
+      const et={0:'N',90:'E',180:'S',270:'W'}[g] || (g/10);
+      const car=(g%90===0);
+      s+=`<g transform="rotate(${a} ${tx.toFixed(1)} ${ty.toFixed(1)})">
+          <text x="${tx.toFixed(1)}" y="${(ty+5).toFixed(1)}" text-anchor="middle"
+          font-size="${car?16:12}" font-weight="700"
+          fill="${car?'#ffce4a':'#eef3f9'}">${et}</text></g>`;
+    }
+  }
+  s+=`</g>`;
+  s+=`<polygon points="100,20 93,33 107,33" fill="#ffce4a"/>`;
+  s+=`<g stroke="#8fb6e8" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <line x1="100" y1="86" x2="100" y2="114"/><line x1="86" y1="100" x2="114" y2="100"/></g>`;
+  s+=`<rect x="77" y="143" width="46" height="16" rx="2" fill="#05080b" stroke="#4c5763"/>
+      <text class="dn" x="100" y="155" text-anchor="middle" font-size="11" fill="#7fd39a"
+      font-family="ui-monospace,monospace">000°</text>`;
+  s+=vidrio('CMP');
+  return {svg:s,
+          din:[ D('dg',()=>V('COMPASS'),a=>ROT(-a),true) ],
+          txt:[ {cls:'dn', get:()=>String(Math.round(V('COMPASS'))%360).padStart(3,'0')+'°'} ]};
+}
+
+// ---------------------------------------------------------------------------
+// INDICADOR DE RUMBO AN/ARN-14  (CDI)
+// ---------------------------------------------------------------------------
+function dialCDI(it){
+  let s=defs('CDI')+bisel('CDI');
+  for(let i=-2;i<=2;i++){
+    if(i===0) continue;
+    s+=`<circle cx="${100+i*22}" cy="100" r="4" fill="none" stroke="#9aa7b8" stroke-width="1.4"/>`;
+  }
+  s+=`<circle cx="100" cy="100" r="6" fill="none" stroke="#c8d2de" stroke-width="1.6"/>`;
+  s+=`<g class="dv" transform="translate(0 0)">
+      <line x1="100" y1="38" x2="100" y2="162" stroke="#ffce4a" stroke-width="3.4" stroke-linecap="round"/></g>`;
+  s+=`<polygon points="100,56 92,70 108,70" fill="#7fd39a"/>`;
+  s+=`<text x="100" y="82" text-anchor="middle" font-size="7.5" fill="#7fd39a" letter-spacing="1.4">TO</text>`;
+  s+=`<rect x="67" y="124" width="66" height="17" rx="2" fill="#05080b" stroke="#4c5763"/>
+      <text x="100" y="136" text-anchor="middle" font-size="10" fill="#7fd39a"
+      font-family="ui-monospace,monospace">CRS 090</text>`;
+  s+=rotulo('AN/ARN-14','RANGE COURSE',168);
+  s+=vidrio('CDI');
+  return {svg:s, din:[ D('dv',()=>Math.max(-5,Math.min(5,V('VOR_CDI')))*8.8,
+                          x=>`translate(${x.toFixed(2)} 0)`) ]};
+}
+
+// ---------------------------------------------------------------------------
+// RELOJ DE CABINA  (mecánico: no lleva canal, lo mueve el tiempo simulado)
+// ---------------------------------------------------------------------------
+function dialReloj(it){
+  let s=defs('CLK')+bisel('CLK');
+  for(let n=0;n<60;n++){
+    const a=n*6, [x0,y0]=pol(a,74),[x1,y1]=pol(a,(n%5===0)?64:70);
+    s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+        stroke="${n%5===0?'#eef3f9':'#8d99a8'}" stroke-width="${n%5===0?2.2:1}"/>`;
+  }
+  for(let n=1;n<=12;n++){
+    const a=n*30,[tx,ty]=pol(a,48);
+    s+=`<text x="${tx.toFixed(1)}" y="${(ty+4.6).toFixed(1)}" text-anchor="middle" font-size="12"
+        fill="#eef3f9" font-weight="600">${n}</text>`;
+  }
+  s+=aguja('dho',40,'#e8eef6',5);
+  s+=aguja('dmi',60,'#e8eef6',3.6);
+  s+=aguja('dse',68,'#ff9f38',1.8,22);
+  // La esfera del reloj no lleva rótulo: los números del 1 al 12 llegan casi
+  // hasta el borde y cualquier texto se les encima.
+  s+=hub()+vidrio('CLK');
+  const T=()=>EST?EST.t:0;
+  return {svg:s, din:[ D('dho',()=>(T()/3600%12)*30,ROT,true),
+                       D('dmi',()=>(T()/60%60)*6,ROT,true),
+                       D('dse',()=>(T()%60)*6,ROT,true) ]};
+}
+
+const CONSTRUCTOR={tacometro:dialTacometro, altimetro:dialAltimetro, horizonte:dialHorizonte,
+                   viraje:dialViraje, brujula:dialBrujula, cdi:dialCDI, reloj:dialReloj};
+
+// ===========================================================================
+// CARÁTULAS IMPRESAS
+// ===========================================================================
+// Si el servidor tiene las carátulas (web/caratulas, las copia
+// herramientas/caratulas_web.py), cada instrumento se dibuja con la MISMA
+// carátula que está pegada en el tablero físico, y la aguja se pone con la
+// misma cuenta que caratulas.py usó para ubicar cada número:
+//
+//     tabla de calibración (0..180)  ->  barrido real  ->  ángulo de dibujo
+//
+// Así el número que marca la aguja en la pantalla es el mismo que marca la
+// aguja de verdad, aunque se cambie un barrido o una calibración: basta con
+// regenerar las carátulas. El horizonte no tiene carátula con aguja (lo que se
+// mueve es un disco) y sigue con su dibujo propio.
+// ===========================================================================
+function barridoDe(it){
+  const b=it.barrido;
+  if(b==='CONT') return 360;
+  return (typeof b==='number')?b:180;
+}
+// Ángulo del actuador -> ángulo matemático de dibujo (90 = arriba, antihorario).
+// Es caratulas.ang_dibujo, renglón por renglón.
+function angDibujo(it,a){
+  const B=barridoDe(it), c=(typeof it.centro==='number')?it.centro:90;
+  const ad=(it.tipo==='MOTOR')?a:a*B/180;
+  return B>=359.9 ? c-ad : c+B/2-ad;
+}
+// Giro que hay que darle a una aguja dibujada apuntando arriba (en SVG el
+// giro positivo es horario, el matemático es antihorario).
+function giroAguja(it,v){ return 90-angDibujo(it, interp(v, it.cal||[])); }
+function instr(id){ return (CAT.instrumentos||[]).find(x=>x.id===id); }
+
+function fondoCaratula(it,c){
+  // la carátula mide L de lado y su círculo tiene radio R: R va al radio 87
+  // de la cara, dentro del bisel
+  const k=87/c.R, L=c.L*k, o=100-L/2;
+  return defs(it.id)+bisel(it.id)+
+    `<image href="/caratulas/${c.archivo}" x="${o.toFixed(2)}" y="${o.toFixed(2)}"
+      width="${L.toFixed(2)}" height="${L.toFixed(2)}"/>`;
+}
+function carAguja(it,c){
+  let s=fondoCaratula(it,c);
+  s+=aguja('d1',72,'#f4f8fd',4.2);
+  s+=hub()+vidrio(it.id);
+  return {svg:s, din:[ D('d1',()=>giroAguja(it,V(it.id)),ROT) ]};
+}
+function carTacometro(it,c){
+  // En el tablero hay UNA aguja (la del motor): con el embrague acoplado
+  // motor y rotor van 10:1 y la escala de adentro se lee como rotor. La página
+  // agrega la del rotor, naranja y corta, para ver el embrague patinar.
+  const r=instr('TACH_ROT');
+  let s=fondoCaratula(it,c);
+  if(r) s+=aguja('dr',50,'#ff9f38',3.6);
+  s+=aguja('de',72,'#f4f8fd',4.0);
+  s+=hub()+vidrio(it.id);
+  const din=[ D('de',()=>giroAguja(it,V('TACH_ENG')),ROT) ];
+  if(r) din.unshift(D('dr',()=>giroAguja(r,V('TACH_ROT')),ROT));
+  return {svg:s, din};
+}
+function carBrujula(it,c){
+  // La rosa está impresa y FIJA; el paso a paso mueve una aguja que da la
+  // vuelta entera (por eso el giro es circular, sin pasar por atrás).
+  let s=fondoCaratula(it,c);
+  s+=`<g class="dg" transform="rotate(0 100 100)">
+      <polygon points="100,30 94.5,100 105.5,100" fill="#ffce4a" stroke="#000" stroke-opacity=".45" stroke-width=".6"/>
+      <polygon points="100,150 95.5,100 104.5,100" fill="#e8eef6" stroke="#000" stroke-opacity=".45" stroke-width=".6"/></g>`;
+  s+=hub()+vidrio(it.id);
+  return {svg:s, din:[ D('dg',()=>giroAguja(it,V('COMPASS')),ROT,true) ]};
+}
+function carViraje(it,c){
+  // La aguja de viraje la mueve un servo. La bola está impresa en la carátula
+  // física; en la página se tapa la impresa y se dibuja una que rueda.
+  const sl=instr('SLIP');
+  const k=87/c.R, rb=0.535*c.R*k, rbola=0.070*c.R*k;
+  let s=fondoCaratula(it,c);
+  if(sl){
+    s+=`<circle cx="100" cy="${(100+rb).toFixed(2)}" r="${(rbola+1).toFixed(2)}" fill="#2E2E2C"/>`;
+    s+=`<g class="db" transform="rotate(0 100 100)">
+        <circle cx="100" cy="${(100+rb).toFixed(2)}" r="${rbola.toFixed(2)}" fill="#111" stroke="#F4F4F2" stroke-width=".9"/></g>`;
+  }
+  s+=aguja('dt',66,'#f4f8fd',4.2);
+  s+=hub()+vidrio(it.id);
+  const din=[ D('dt',()=>giroAguja(it,V('TURN')),ROT) ];
+  // la bola está a 270° (abajo) con ladeo cero; la tabla de SLIP da su ángulo
+  if(sl) din.push(D('db',()=>90-interp(V('SLIP'),sl.cal||[]),ROT));
+  return {svg:s, din};
+}
+function carReloj(it,c){
+  let s=fondoCaratula(it,c);
+  s+=aguja('dho',40,'#e8eef6',5);
+  s+=aguja('dmi',62,'#e8eef6',3.6);
+  s+=aguja('dse',70,'#ff9f38',1.8,22);
+  s+=hub()+vidrio(it.id);
+  const T=()=>EST?EST.t:0;
+  return {svg:s, din:[ D('dho',()=>(T()/3600%12)*30,ROT,true),
+                       D('dmi',()=>(T()/60%60)*6,ROT,true),
+                       D('dse',()=>(T()%60)*6,ROT,true) ]};
+}
+const CON_CARATULA={aguja:carAguja, altimetro:carAguja, cdi:carAguja,
+                    tacometro:carTacometro, brujula:carBrujula,
+                    viraje:carViraje, reloj:carReloj};
+function fabricaDe(it){
+  const c=(CAT.caratulas||{})[it.id];
+  const f=CON_CARATULA[it.dial||'aguja'];
+  if(c && f && !MODO.esferas_viejas) return x=>f(x,c);
+  return CONSTRUCTOR[it.dial]||dialAguja;
+}
+
+// ===========================================================================
+// PANEL DE CONMUTADORES
+// ===========================================================================
+// Se dibuja en una sola lamina SVG con el mismo sistema de coordenadas del
+// tablero, así los números de configuracion.py se usan tal cual. Cada llave se anima
+// a partir del estado del simulador.
+// ===========================================================================
+function senal(nombre){
+  const m=(EST&&EST.mandos)||{};
+  switch(nombre){
+    case 'bateria':   return m.bateria?1:0;
+    case 'generador': return m.generador?1:0;
+    case 'energia':   return (EST&&EST.energia_ok)?1:0;
+    case 'bomba':     return m.bomba?1:0;
+    case 'arrancador':return m.arrancador?1:0;
+    case 'luces':     return (m.luces>0.05)?1:0;
+    case 'magnetos':  return m.magnetos||0;
+    case 'tanque':    return (m.tanque===undefined)?2:m.tanque;
+    // Un disyuntor "salta" cuando su circuito quedó sin protección útil. El
+    // único que se modela es el del generador, que acompaña a la luz roja.
+    case 'cb_gen':    return (V('LT_GEN')>=0.5)?1:0;
+    default:          return 0;
+  }
+}
+function grabado(x,y,txt,tam,anchor,color){
+  return `<text x="${x}" y="${y}" font-size="${tam||7.5}" text-anchor="${anchor||'middle'}"
+    fill="${color||'#cdd5b6'}" font-weight="700" letter-spacing="1.1"
+    style="paint-order:stroke" stroke="#000" stroke-opacity=".55" stroke-width=".7">${txt}</text>`;
+}
+function tornilloSVG(x,y){
+  return `<circle cx="${x}" cy="${y}" r="3.4" fill="#5c6449" stroke="#2a301f" stroke-width=".8"/>
+          <line x1="${x-2.2}" y1="${y}" x2="${x+2.2}" y2="${y}" stroke="#252b1b" stroke-width="1"/>`;
+}
+
+function dibujarConmutadores(lista){
+  let s='', din=[];
+  for(const c of lista){
+    const [x,y]=c.pos, [w,h]=c.tam;
+
+    if(c.tipo==='placa'){
+      s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#79815f"
+            stroke="#2b3120" stroke-width="1"/>
+          <rect x="${x}" y="${y}" width="${w}" height="${h/2}" rx="2" fill="#8f9873" opacity=".55"/>`;
+      s+=grabado(x+w/2, y+h/2+3.4, c.texto, 9, 'middle', '#1c2013');
+      if(c.sub) s+=grabado(x+w-19, y+h/2+3.4, c.sub, 6.5, 'end', '#3a4128');
+      s+=tornilloSVG(x+7,y+h/2)+tornilloSVG(x+w-7,y+h/2);
+      continue;
+    }
+    if(c.tipo==='rotulo'){
+      const ancho=c.texto.length*5.6+14;
+      s+=`<line x1="${x}" y1="${y+9}" x2="${x+w}" y2="${y+9}" stroke="#2b3120" stroke-opacity=".55" stroke-width="1"/>
+          <rect x="${(x+w/2-ancho/2).toFixed(1)}" y="${y+2}" width="${ancho.toFixed(1)}" height="11"
+            fill="#4c5540"/>`;
+      s+=grabado(x+w/2, y+11, c.texto, 7.5, 'middle', '#b9c2a0');
+      continue;
+    }
+    if(c.tipo==='nota'){
+      s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#2c3324" fill-opacity=".8"
+            stroke="#20261a" stroke-width="1"/>`;
+      const pal=c.texto.split(' '); let ln=[], cur='';
+      for(const p of pal){ if((cur+' '+p).length>44){ln.push(cur);cur=p;} else cur=cur?cur+' '+p:p; }
+      if(cur) ln.push(cur);
+      ln.forEach((t,i)=>{ s+=`<text x="${x+9}" y="${y+15+i*11}" font-size="7.4" fill="#a9b393">${t}</text>`; });
+      continue;
+    }
+
+    // ---- controles con zona sensible al mouse -----------------------------
+    const g0=`<g class="ctl" data-sw="${c.id}">
+        <rect class="halo" x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="#d7a93f"
+          fill-opacity=".13" opacity="0"/>
+        <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent"/>`;
+
+    // Una llave a palanca real se marca ON arriba y OFF abajo, y la palanca
+    // apunta a la marca que está seleccionada. Por eso el dibujo pivota 180
+    // grados sobre el centro de la caja, y NO se inclina de costado: inclinada
+    // de costado la palanca apunta a cualquier lado menos a su propio rótulo.
+    if(c.tipo==='palanca'){
+      const cx=x+w/2, cy=y+40;
+      s+=g0;
+      s+=grabado(cx, y+11, c.rot, 7.2);
+      s+=`<rect x="${cx-15}" y="${cy-20}" width="30" height="40" rx="4" fill="#20261a"
+            stroke="#12160e" stroke-width="1"/>
+          <rect x="${cx-13}" y="${cy-18}" width="26" height="36" rx="3" fill="#171c12"/>`;
+      s+=grabado(cx+18, cy-9, 'ON', 5, 'start', '#96a07e');
+      s+=grabado(cx+18, cy+14, 'OFF', 5, 'start', '#96a07e');
+      s+=`<g class="sw${c.id}" transform="rotate(0 ${cx} ${cy})">
+            <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-11}" stroke="#0a0c07" stroke-width="7.4"
+              stroke-linecap="round"/>
+            <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-11}" stroke="#c6ceb2" stroke-width="4.6"
+              stroke-linecap="round"/>
+            <circle cx="${cx}" cy="${cy-12.5}" r="4.4" fill="#e4e9d4" stroke="#4a5140" stroke-width=".8"/>
+          </g>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="5.6" fill="#2b3223" stroke="#151a11" stroke-width="1"/>
+          <circle cx="${cx}" cy="${cy}" r="2.6" fill="#191e12"/>`;
+      if(c.sub) s+=grabado(cx, y+h-3, c.sub, 6.2, 'middle', '#98a186');
+      s+=`</g>`;
+      din.push({cls:'sw'+c.id, get:()=>senal(c.senal)?0:180,
+                fmt:a=>`rotate(${a.toFixed(2)} ${cx} ${cy})`});
+    }
+
+    else if(c.tipo==='guarda'){
+      const cx=x+w/2, cy=y+46, hy=cy-20;      // hy = eje de la bisagra, arriba
+      s+=g0;
+      s+=grabado(cx, y+8, c.rot, 7.2);
+      s+=`<rect x="${cx-19}" y="${cy-20}" width="38" height="40" rx="4" fill="#20261a"
+            stroke="#12160e" stroke-width="1"/>
+          <rect x="${cx-17}" y="${cy-18}" width="34" height="36" rx="3" fill="#171c12"/>`;
+      s+=`<g class="sw${c.id}" transform="rotate(0 ${cx} ${cy})">
+            <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-11}" stroke="#0a0c07" stroke-width="7"
+              stroke-linecap="round"/>
+            <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-11}" stroke="#c4ccae" stroke-width="4.4"
+              stroke-linecap="round"/>
+            <circle cx="${cx}" cy="${cy-12.5}" r="4.2" fill="#e4e9d4" stroke="#4a5140" stroke-width=".8"/>
+          </g>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="5.4" fill="#2b3223" stroke="#151a11" stroke-width="1"/>`;
+      // tapa de seguridad roja: bisagra ARRIBA, se levanta hacia la izquierda
+      s+=`<g class="gu${c.id}" transform="rotate(0 ${cx} ${hy})">
+            <path d="M ${cx-17} ${hy} L ${cx-17} ${hy+34} Q ${cx} ${hy+41} ${cx+17} ${hy+34}
+                     L ${cx+17} ${hy} Z" fill="#8e2418" stroke="#4a1109" stroke-width="1.2"/>
+            <path d="M ${cx-13} ${hy+4} L ${cx-13} ${hy+30} Q ${cx} ${hy+36} ${cx+13} ${hy+30}
+                     L ${cx+13} ${hy+4} Z" fill="#b93524" opacity=".85"/>
+            <line x1="${cx-11}" y1="${hy+13}" x2="${cx+11}" y2="${hy+13}" stroke="#5d180f" stroke-width="1.4"/>
+            <line x1="${cx-11}" y1="${hy+21}" x2="${cx+11}" y2="${hy+21}" stroke="#5d180f" stroke-width="1.4"/>
+          </g>`;
+      s+=`<circle cx="${cx-17}" cy="${hy}" r="2.6" fill="#4d5540" stroke="#252b1b" stroke-width=".7"/>
+          <circle cx="${cx+17}" cy="${hy}" r="2.6" fill="#4d5540" stroke="#252b1b" stroke-width=".7"/>`;
+      if(c.sub) s+=grabado(cx, y+h-3, c.sub, 6.2, 'middle', '#98a186');
+      s+=`</g>`;
+      // 80 grados: la tapa queda casi horizontal, apoyada a la izquierda, sin
+      // invadir el control vecino ni la fila de arriba
+      din.push({cls:'gu'+c.id, get:()=>senal(c.senal)?80:0,
+                fmt:a=>`rotate(${a.toFixed(2)} ${cx} ${hy})`});
+      din.push({cls:'sw'+c.id, get:()=>senal(c.senal)?0:180,
+                fmt:a=>`rotate(${a.toFixed(2)} ${cx} ${cy})`});
+    }
+
+    else if(c.tipo==='rotativo'){
+      const cx=x+w/2, cy=y+46, R=15;
+      const n=c.opciones.length, ext=60;          // grados a cada lado
+      s+=g0;
+      s+=grabado(cx, y+11, c.rot, 7.2);
+      s+=`<circle cx="${cx}" cy="${cy}" r="${R+7}" fill="#1d2317" stroke="#12160e" stroke-width="1"/>`;
+      c.opciones.forEach((o,i)=>{
+        const a=-ext+(n>1?(i*2*ext/(n-1)):0);
+        const rad=(a-90)*Math.PI/180;
+        // el rótulo va POR FUERA del anillo del selector; si se dibuja más
+        // cerca queda tapado por la perilla
+        const tx=cx+(R+14)*Math.cos(rad), ty=cy+(R+14)*Math.sin(rad);
+        const mx=cx+(R+3.5)*Math.cos(rad), my=cy+(R+3.5)*Math.sin(rad);
+        s+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="1.3" fill="#9aa483"/>`;
+        s+=grabado(tx.toFixed(1), (ty+2.2).toFixed(1), o[0], 5.4, 'middle', '#cad3b0');
+      });
+      s+=`<g class="sw${c.id}" transform="rotate(0 ${cx} ${cy})">
+            <circle cx="${cx}" cy="${cy}" r="${R}" fill="#3b4230" stroke="#171b11" stroke-width="1.2"/>
+            <circle cx="${cx}" cy="${cy}" r="${R-4}" fill="#4d553d"/>
+            <polygon points="${cx-3},${cy} ${cx+3},${cy} ${cx+1.6},${cy-R+2} ${cx-1.6},${cy-R+2}"
+              fill="#e2e8cd"/>
+            <circle cx="${cx}" cy="${cy}" r="3" fill="#232819"/></g>`;
+      s+=`</g>`;
+      const idx=v=>{ let k=0; c.opciones.forEach((o,i)=>{ if(o[1]===v) k=i; }); return k; };
+      din.push({cls:'sw'+c.id,
+                get:()=>{ const i=idx(senal(c.senal)); return -ext+(n>1?(i*2*ext/(n-1)):0); },
+                fmt:a=>`rotate(${a.toFixed(2)} ${cx} ${cy})`});
+    }
+
+    else if(c.tipo==='disyuntor'){
+      const cx=x+w/2, cy=y+13;
+      s+=g0;
+      s+=`<circle cx="${cx}" cy="${cy}" r="9.5" fill="#1b2016" stroke="#10140c" stroke-width="1"/>`;
+      s+=`<circle class="cb${c.id}" cx="${cx}" cy="${cy}" r="7" fill="#c8cfb2" opacity="0"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="6" fill="#3a4130" stroke="#1d2216" stroke-width=".8"/>`;
+      s+=grabado(cx, y+h-4, c.rot, 5.8, 'middle', '#aab494');
+      s+=`</g>`;
+      din.push({cls:'cb'+c.id, get:()=>senal(c.senal), fmt:v=>v.toFixed(3), attr:'opacity'});
+    }
+  }
+  return {svg:s, din:din, ctl:lista.filter(c=>c.id)};
+}
+
+// ===========================================================================
+// CHAPAS DE DATOS
+// ===========================================================================
+// La ficha de la célula y la tabla de limitaciones no cambian nunca: se
+// dibujan una vez y no vuelven a tocarse. Los números vienen calculados
+// desde configuracion.py, así que no hay ni una cifra escrita en esta página.
+// ===========================================================================
+function dibujarPlacas(lista){
+  let s='';
+  for(const p of lista||[]){
+    const [x,y]=p.pos, [w,h]=p.tam;
+
+    // --- chapa de datos: placa metalica remachada sobre la estructura ------
+    s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#5f6850"
+          stroke="#262c1c" stroke-width="1.2"/>
+        <rect x="${x+1}" y="${y+1}" width="${w-2}" height="${h/2}" rx="2" fill="#6e7760" opacity=".45"/>
+        <rect x="${x+6}" y="${y+6}" width="${w-12}" height="${h-12}" rx="2" fill="none"
+          stroke="#3c4430" stroke-width="1"/>`;
+    s+=grabado(x+w/2, y+21, p.titulo, 8.6, 'middle', '#1e2216');
+    s+=`<line x1="${x+14}" y1="${y+26}" x2="${x+w-14}" y2="${y+26}" stroke="#3c4430" stroke-width="1"/>`;
+    const paso=(h-42)/Math.max(1,(p.filas||[]).length);
+    (p.filas||[]).forEach((f,i)=>{
+      const fy=y+40+i*paso;
+      s+=`<text x="${x+16}" y="${fy}" font-size="7.6" font-weight="800" fill="#242a18"
+            letter-spacing=".4">${f[0]}</text>
+          <text x="${x+w-16}" y="${fy}" font-size="7.6" fill="#111409" text-anchor="end">${f[1]}</text>`;
+    });
+    [[10,10],[w-10,10],[10,h-10],[w-10,h-10]].forEach(t=>{
+      s+=tornilloSVG(x+t[0], y+t[1]);
+    });
+  }
+  return {svg:s, din:[]};
+}
+
+// ===========================================================================
+// CONSTRUCCIÓN DEL TABLERO  (una sola vez)
+// ===========================================================================
+function montar(raiz, din, txt){
+  (din||[]).forEach(d=>{
+    const el=raiz.querySelector('.'+d.cls);
+    if(!el) return;
+    DIN.push({el, attr:d.attr||'transform', fmt:d.fmt, get:d.get, circ:!!d.circ, a:NaN, o:0});
+  });
+  (txt||[]).forEach(d=>{
+    const el=raiz.querySelector('.'+d.cls);
+    if(el) TXT.push({el, get:d.get, ult:null});
+  });
+}
+
+function construir(){
+  LIENZO = CAT.lienzo || LIENZO;
+  document.getElementById('ficha').textContent =
+    CAT.aeronave.serie+' · '+CAT.aeronave.operador+' · '+CAT.aeronave.servicio;
+
+  const T=document.getElementById('tablero');
+  T.style.width=LIENZO[0]+'px';
+  T.style.height=LIENZO[1]+'px';
+  DIN.length=0; TXT.length=0;
+
+  let h='';
+
+  // --- regiones ---
+  const zonas=CAT.zonas||[];
+  zonas.forEach(z=>{
+    // El id deja agarrar una region entera desde afuera -capturas.py le saca
+    // la foto al anunciador para los documentos-. Sin id habia que recortar
+    // por coordenadas, que se rompe apenas alguien mueve un instrumento.
+    h+=`<div class="zona ${z.estilo}" id="Z_${z.id}" style="left:${z.pos[0]}px;top:${z.pos[1]}px;
+         width:${z.tam[0]}px;height:${z.tam[1]}px"><span class="tit">${z.titulo}</span></div>`;
+    // Los sub-paneles negros van atornillados sobre la estructura verde. En
+    // las franjas bajas no entra la decoración sin pisar el contenido, así
+    // que ahí se omite.
+    if(z.estilo==='negro' && z.tam[1]>=200){
+      if(z.chapa){
+        h+=`<div class="chapa" style="left:${z.pos[0]+26}px;top:${z.pos[1]+z.tam[1]-17}px">${z.chapa}</div>`;
+      }
+      [[10,10],[z.tam[0]-19,10],[10,z.tam[1]-19],[z.tam[0]-19,z.tam[1]-19]].forEach(p=>{
+        h+=`<i class="torn" style="left:${z.pos[0]+p[0]}px;top:${z.pos[1]+p[1]}px"></i>`;
+      });
+    }
+  });
+
+  // --- lamina del panel de conmutadores ---
+  // Un solo SVG con el viewBox puesto en coordenadas del tablero: los números
+  // de configuracion.py entran tal cual, sin conversión.
+  const zSW=zonas.find(z=>z.id==='SW');
+  const conm=dibujarConmutadores(CAT.conmutadores||[]);
+  if(zSW){
+    h+=`<svg class="lamina" id="laminaSW"
+          style="left:${zSW.pos[0]}px;top:${zSW.pos[1]}px;width:${zSW.tam[0]}px;height:${zSW.tam[1]}px"
+          viewBox="${zSW.pos[0]} ${zSW.pos[1]} ${zSW.tam[0]} ${zSW.tam[1]}">${conm.svg}</svg>`;
+  }
+
+  // --- lamina de las chapas de datos (una sola, sobre todo el lienzo) ---
+  const placas=dibujarPlacas(CAT.placas||[]);
+  h+=`<svg class="lamina" id="laminaPL"
+        style="left:0;top:0;width:${LIENZO[0]}px;height:${LIENZO[1]}px"
+        viewBox="0 0 ${LIENZO[0]} ${LIENZO[1]}">${placas.svg}</svg>`;
+
+  // --- instrumentos ---
+  const dials=[];
+  (CAT.instrumentos||[]).filter(i=>i.pos).forEach(it=>{
+    const fabrica=fabricaDe(it);
+    const d=fabrica(it); dials.push([it,d]);
+    // El numero de canal no va en la caratula: es informacion de armado,
+    // no de vuelo. En un tablero real no dice "#23" al lado de la presion
+    // de admision. Sigue estando en la ficha que aparece al tocar el
+    // instrumento, que es donde hace falta.
+    const num = '';
+    h+=`<div class="inst" id="I_${it.id}" data-inst="${it.id}"
+         style="left:${it.pos[0]}px;top:${it.pos[1]}px;width:${it.tam}px;height:${it.tam}px">
+         <svg viewBox="0 0 200 200" id="S_${it.id}">${d.svg}</svg>
+         <div class="rot">${num}${CORTO[it.id]||it.nombre}</div></div>`;
+  });
+
+  // --- las luces de alerta, cada una al lado de lo que vigila ---
+  // XMSN PRESS al lado de las dos agujas de transmisión se explica sola.
+  // Cada luz trae su lugar desde configuracion.py, igual que cada instrumento.
+  (CAT.anunciador||[]).forEach(a=>{
+    if(!a.pos) return;
+    h+=`<div class="luz ${a.color}" id="L_${a.id}" data-luz="${a.id}"
+         style="left:${a.pos[0]}px;top:${a.pos[1]}px;
+                width:${a.tam[0]}px;height:${a.tam[1]}px">${a.leyenda}</div>`;
+  });
+
+  T.innerHTML=h;
+
+  // --- se cachean los elementos animados, una sola vez ---
+  dials.forEach(([it,d])=>{ montar(document.getElementById('S_'+it.id), d.din, d.txt); });
+  const lSW=document.getElementById('laminaSW'); if(lSW) montar(lSW, conm.din);
+
+  CTL={}; (conm.ctl||[]).forEach(c=>{ CTL[c.id]=c; });
+  escalar();
+  refrescarObjetivos();
+  DIN.forEach(d=>{ d.a=d.o; aplicar(d); });      // sin barrido inicial
+}
+let CTL={};
+
+// El tablero se dibuja siempre en su lienzo nominal y después se escala. Así
+// no hay que recalcular ni una coordenada cuando cambia el tamaño de ventana.
+// El tablero se dibuja SIEMPRE en su lienzo nominal de 1460 x 680 y después se
+// escala entero. Así no hay que recalcular ni una coordenada cuando cambia el
+// tamaño de la ventana, y la misma página sirve en un proyector del aula, en
+// una notebook, en una tablet y en un celular.
+//
+// La escala sale del lado que MÁS aprieta, ancho o alto. En el tablero, que es
+// cuatro veces más ancho que alto, casi siempre aprieta el alto.
+const ESCALA_MAX = 2.2;      // tope, para que en un proyector no se pixele
+
+function escalar(){
+  const T=document.getElementById('tablero');
+  const L=document.getElementById('lienzo');
+  const M=document.getElementById('marco');
+  if(!T||!L||!M) return;
+
+  const est=getComputedStyle(M);
+  const anchoUtil = M.clientWidth  - parseFloat(est.paddingLeft) - parseFloat(est.paddingRight);
+  const altoUtil  = M.clientHeight - parseFloat(est.paddingTop)  - parseFloat(est.paddingBottom);
+  if(anchoUtil<=0 || altoUtil<=0) return;
+
+  const k = Math.min(anchoUtil/LIENZO[0], altoUtil/LIENZO[1], ESCALA_MAX);
+  T.style.transform = 'scale('+k.toFixed(4)+')';
+  // el contenedor toma el tamaño YA escalado: sin esto quedan huecos abajo
+  L.style.width  = (LIENZO[0]*k)+'px';
+  L.style.height = (LIENZO[1]*k)+'px';
+}
+
+// Se reacciona al tamaño real del marco, no solo a resize: así también se
+// acomoda cuando se entra o se sale de pantalla completa, cuando se gira el
+// teléfono, o cuando aparece y desaparece la barra del navegador en el celular.
+let _tEscala=null;
+function pedirEscalar(){
+  if(_tEscala) return;
+  _tEscala=requestAnimationFrame(()=>{ _tEscala=null; escalar(); });
+}
+window.addEventListener('resize', pedirEscalar);
+window.addEventListener('orientationchange', ()=>setTimeout(pedirEscalar,120));
+if(window.ResizeObserver){
+  new ResizeObserver(pedirEscalar).observe(document.getElementById('marco'));
+}
+
+// ===========================================================================
+// PANTALLA COMPLETA
+// ===========================================================================
+// Dos cosas a la vez: se oculta todo lo que no es el tablero (clase 'plena')
+// y se pide pantalla completa al navegador, para que en el proyector no quede
+// ni la barra de direcciones. Si el navegador la niega, la clase alcanza.
+function pantallaCompleta(activar){
+  document.body.classList.toggle('plena', !!activar);
+  try{
+    if(activar && !document.fullscreenElement && document.documentElement.requestFullscreen){
+      document.documentElement.requestFullscreen().catch(()=>{});
+    }else if(!activar && document.fullscreenElement && document.exitFullscreen){
+      document.exitFullscreen().catch(()=>{});
+    }
+  }catch(e){}
+  pedirEscalar();
+}
+document.addEventListener('fullscreenchange',()=>{
+  if(!document.fullscreenElement) document.body.classList.remove('plena');
+  pedirEscalar();
+});
+document.addEventListener('keydown',e=>{
+  if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  if(e.key==='f' || e.key==='F') pantallaCompleta(!document.body.classList.contains('plena'));
+  if(e.key==='m' || e.key==='M'){
+    const a=document.getElementById('aMando');
+    if(a && a.style.display!=='none') location.href='/mando';
+  }
+  if(e.key==='Escape') pantallaCompleta(false);
+});
+
+// ===========================================================================
+// ANIMACIÓN
+// ===========================================================================
+// La telemetría llega a 5 Hz. Si las agujas saltaran de una lectura a la otra
+// el tablero se vería a los tirones. Un retardo de primer orden a 60 Hz las
+// lleva al valor nuevo igual que hace la inercia del servo real.
+// ===========================================================================
+const TAU=0.075;
+let tPrev=0, rafPend=false;
+
+function aplicar(d){ d.el.setAttribute(d.attr, d.fmt(d.a)); }
+
+function refrescarObjetivos(){
+  for(let i=0;i<DIN.length;i++){
+    const d=DIN[i];
+    const v=d.get();
+    d.o=(typeof v==='number' && isFinite(v))?v:0;
+  }
+  for(let i=0;i<TXT.length;i++){
+    const t=TXT[i], v=t.get();
+    if(v!==t.ult){ t.el.textContent=v; t.ult=v; }
+  }
+}
+
+function cuadro(ts){
+  rafPend=false;
+  const dt=Math.min(0.1, tPrev?(ts-tPrev)/1000:0.016); tPrev=ts;
+  const k=1-Math.exp(-dt/TAU);
+  let vivos=0;
+  for(let i=0;i<DIN.length;i++){
+    const d=DIN[i];
+    let dif=d.o-d.a;
+    if(d.circ) dif=((dif+540)%360)-180;
+    if(Math.abs(dif)<0.015){
+      if(d.a!==d.o){ d.a=d.o; aplicar(d); }
+      continue;
+    }
+    d.a+=dif*k; aplicar(d); vivos++;
+  }
+  if(vivos) pedirCuadro();
+}
+function pedirCuadro(){
+  if(rafPend || document.hidden) return;
+  rafPend=true; requestAnimationFrame(cuadro);
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ tPrev=0; pedirCuadro(); } });
+
+// ===========================================================================
+// LLEGADA DE TELEMETRÍA
+// ===========================================================================
+function pintar(d){
+  EST=d;
+  document.getElementById('modotxt').textContent=d.modo_nombre;
+  document.getElementById('ttxt').textContent=d.t.toFixed(1);
+  document.getElementById('fasetxt').textContent=d.fase||d.escenario||'—';
+  document.getElementById('fasedesc').textContent=(d.fase_texto||'').slice(0,120);
+  pausado=d.pausado;
+
+  // luces de alerta: solo se toca la clase cuando cambia
+  const luces=CAT.anunciador||[];
+  for(let i=0;i<luces.length;i++){
+    const a=luces[i], e=document.getElementById('L_'+a.id);
+    if(!e) continue;
+    const s=d.instrumentos?d.instrumentos[a.id]:null;
+    // 'ang' es lo que el programa manda a la luz de verdad (incluye la
+    // prueba de lámparas); 'v' es sólo la condición de alarma del modelo.
+    const on=luzEncendida(s);
+    if(e.dataset.on!==(on?'1':'0')){
+      e.dataset.on=on?'1':'0';
+      e.className='luz '+a.color+(on?' on':'');
+    }
+  }
+
+  // marca de indicación fallada, solo cuando cambia
+  const ins=CAT.instrumentos||[];
+  for(let i=0;i<ins.length;i++){
+    const it=ins[i]; if(!it.pos) continue;
+    const s=d.instrumentos?d.instrumentos[it.id]:null;
+    const an=!!(s&&s.anom);
+    const el=document.getElementById('I_'+it.id);
+    if(el && el.classList.contains('anom')!==an) el.classList.toggle('anom',an);
+  }
+
+  // iluminación del tablero
+  const noche=!!(d.mandos&&d.mandos.luces>0.05);
+  const T=document.getElementById('tablero');
+  if(T.classList.contains('noche')!==noche) T.classList.toggle('noche',noche);
+
+  refrescarObjetivos();
+  pedirCuadro();
+  if(fijado) mostrarInfo(fijado);
+
+  const L=document.getElementById('log');
+  const ms=d.mensajes||[];
+  for(let i=0;i<ms.length;i++){
+    const m=ms[i], k=m.t+'|'+m.texto;
+    if(vistos.has(k)) continue;
+    vistos.add(k);
+    const div=document.createElement('div');
+    div.innerHTML='<span class="ts">'+m.t.toFixed(1)+'s</span>'+m.texto;
+    L.appendChild(div);
+    while(L.children.length>50) L.removeChild(L.firstChild);
+    L.scrollTop=L.scrollHeight;
+  }
+  if(vistos.size>400) vistos=new Set();
+}
+
+// ===========================================================================
+// BARRA DE INFORMACIÓN  (un solo escucha de eventos para todo el tablero)
+// ===========================================================================
+function mostrarInfo(id){
+  const it=(CAT.instrumentos||[]).find(x=>x.id===id);
+  if(!it) return;
+  const s=EST&&EST.instrumentos?EST.instrumentos[id]:null;
+  document.getElementById('itit').innerHTML=
+    `${it.nombre}<small>${it.en}</small>`;
+  document.getElementById('ides').textContent=it.desc||'';
+  let v='';
+  if(it.tipo==='MECANICO'){
+    // El reloj no tiene canal ni escala útil: lo que sirve es la hora.
+    const t=EST?EST.t:0, dd=n=>String(Math.floor(n)).padStart(2,'0');
+    v=`<b>${dd(t/3600)}:${dd(t/60%60)}:${dd(t%60)}</b> transcurrido<br>`+
+      `mecánico, sin canal del PCA9685`;
+  }else{
+    const verde=(it.arcos||[]).find(a=>a[2]==='verde');
+    if(s) v+=`<b>${Math.abs(s.v)>=100?s.v.toFixed(0):s.v.toFixed(1)}</b> ${it.unidad}<br>`;
+    if(verde) v+=`arco verde ${verde[0]} a ${verde[1]} ${it.unidad}<br>`;
+    v+=`escala ${it.min} a ${it.max}`;
+    if(it.canal) v+=` · canal ${it.canal[0]}:${it.canal[1]}`;
+    if(s&&s.anom) v+=` <span style="color:var(--rojo)">· INDICACIÓN FALLADA</span>`;
+  }
+  document.getElementById('ival').innerHTML=v;
+}
+function verLuz(id){
+  const a=(CAT.anunciador||[]).find(x=>x.id===id); if(!a) return;
+  const s=EST&&EST.instrumentos?EST.instrumentos[id]:null;
+  const t=(CAT.instrumentos||[]).find(x=>x.id===id);
+  document.getElementById('itit').innerHTML=`LUZ · ${a.leyenda}<small>anunciador de alerta</small>`;
+  document.getElementById('ides').textContent=a.desc;
+  document.getElementById('ival').innerHTML=
+    (luzEncendida(s)?'<b style="color:var(--rojo)">ENCENDIDA</b>':'<b>apagada</b>')+
+    (t&&t.canal?`<br>canal ${t.canal[0]}:${t.canal[1]}`:'');
+}
+const DESC_CB='Disyuntor térmico. Protege su circuito: si pasa más corriente de la '+
+  'debida, salta hacia afuera y deja ver el collar blanco. En el H-08 los disyuntores '+
+  'son decorativos, pero el del generador acompaña a la luz roja de GENERATOR.';
+function verLlave(id){
+  const c=CTL[id]; if(!c) return;
+  const est=senal(c.senal);
+  let leyenda;
+  if(c.tipo==='rotativo'){
+    const o=(c.opciones||[]).find(o=>o[1]===est);
+    leyenda='<b>'+(o?o[0]:'?')+'</b>';
+  }else if(c.tipo==='disyuntor'){
+    leyenda=est?'<b style="color:var(--rojo)">SALTADO</b>':'<b>armado</b>';
+  }else leyenda=est?'<b style="color:var(--verde)">ON</b>':'<b>OFF</b>';
+  document.getElementById('itit').innerHTML=
+    `${c.rot}<small>las mueve el piloto virtual</small>`;
+  document.getElementById('ides').textContent=c.desc||(c.tipo==='disyuntor'?DESC_CB:'');
+  document.getElementById('ival').innerHTML=leyenda;
+}
+function marcar(id){
+  document.querySelectorAll('.inst.sel').forEach(e=>e.classList.remove('sel'));
+  if(id){ const e=document.getElementById('I_'+id); if(e) e.classList.add('sel'); }
+}
+
+const TAB=document.getElementById('tablero');
+TAB.addEventListener('mouseover',e=>{
+  if(fijado) return;
+  const i=e.target.closest('[data-inst]'); if(i){ mostrarInfo(i.dataset.inst); marcar(i.dataset.inst); return; }
+  const l=e.target.closest('[data-luz]');  if(l){ verLuz(l.dataset.luz); marcar(null); return; }
+  const s=e.target.closest('[data-sw]');   if(s){ verLlave(s.dataset.sw); marcar(null); }
+});
+TAB.addEventListener('mouseleave',()=>{ if(!fijado) marcar(null); });
+TAB.addEventListener('click',e=>{
+  const i=e.target.closest('[data-inst]');
+  if(i){ fijado=(fijado===i.dataset.inst)?null:i.dataset.inst;
+         if(fijado){ mostrarInfo(fijado); marcar(fijado); } else marcar(null); return; }
+  fijado=null; marcar(null);
+  const l=e.target.closest('[data-luz]'); if(l) verLuz(l.dataset.luz);
+  const s=e.target.closest('[data-sw]');  if(s) verLlave(s.dataset.sw);
+});
+
+// ===========================================================================
+// ESTA PÁGINA SÓLO MIRA
+// ===========================================================================
+// Las órdenes al tablero están en web/mando.html, la página del
+// administrador. El servidor además rechaza toda orden que no venga de una
+// sesión de administrador: esa es la protección que vale.
+
+// ===========================================================================
+// TRANSPORTE: consulta periódica del estado (cada 250 ms)
+// ===========================================================================
+function conex(ok,txt){
+  document.getElementById('conex').className=ok?'punto on':'punto';
+  document.getElementById('conextxt').textContent=txt;
+}
+// En el kiosco, si el tablero se cae y vuelve (se reinició el servicio o se
+// instaló una versión nueva) la página se recarga sola: así la pantalla de la
+// Raspberry muestra siempre la última versión sin que nadie la toque.
+let caidoDesde=0;
+function consultar(){
+  if(timerPoll) return;
+  timerPoll=setInterval(()=>{
+    if(document.hidden) return;
+    fetch('/api/estado').then(r=>r.json())
+      .then(d=>{
+        if(MODO.kiosco && caidoDesde && Date.now()-caidoDesde>3000){ location.reload(); return; }
+        caidoDesde=0; conex(true,'en línea'); if(CAT) pintar(d); })
+      .catch(()=>{ if(!caidoDesde) caidoDesde=Date.now(); conex(false,'sin conexión'); });
+  },250);
+}
+function cargarCatalogo(){
+  fetch('/api/catalogo').then(r=>r.json()).then(c=>{
+    CAT=c;
+    // Con sesión de administrador aparece el atajo a la botonera.
+    if(c && c.admin && !MODO.kiosco) document.getElementById('aMando').style.display='';
+    if(c && c.wifi){
+      document.getElementById('qrkred').textContent=c.wifi.red;
+      document.getElementById('qrkdir').textContent=(c.url_publica||c.wifi.url).replace(/^http:\/\//,'').replace(/\/$/,'');
+    }
+    construir(); consultar();
+  }).catch(()=>{ conex(false,'sin conexión'); setTimeout(cargarCatalogo,2000); });
+}
+cargarCatalogo();
+</script>
+</body>
+</html>
