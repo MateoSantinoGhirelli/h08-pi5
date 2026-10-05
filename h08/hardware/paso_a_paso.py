@@ -135,7 +135,7 @@ class MotorContinuo:
 class EscritorGPIO:
     """Pone los 4 pines IN1..IN4 de una plaquita; sólo escribe los que cambian.
 
-    Con gpiozero, que en la Pi 5 trabaja sobre lgpio: RPi.GPIO no anda con el RP1.
+    Con gpiozero, que en la Pi 5 trabaja sobre lgpio: RPi.GPIO no funciona con el RP1.
     """
 
     def __init__(self):

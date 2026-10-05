@@ -1,11 +1,10 @@
 # CONTEXTO DEL PROYECTO · Tablero H-08 en la Raspberry Pi 5
 
-> Documento para Claude Code. Explica **qué es el proyecto, qué tiene que hacer el
-> programa en la Raspberry Pi 5, cómo está armado el hardware y en qué formato tiene
-> que estar instalado un programa en la Pi 5**. Leelo entero antes de un cambio
-> grande. Las reglas cortas de todos los días están en `CLAUDE.md`.
-> El código actual ya cumple todo esto: la tarea es mantenerlo, corregirlo y
-> mejorarlo **sin romper el formato descrito acá**.
+> Documento técnico para quien mantenga el programa. Explica **qué es el proyecto,
+> qué tiene que hacer el programa en la Raspberry Pi 5, cómo está armado el hardware
+> y en qué formato tiene que estar instalado en la Pi 5**. Conviene leerlo entero
+> antes de un cambio grande: cualquier mejora tiene que respetar el formato
+> descrito acá.
 
 ---
 
@@ -29,7 +28,7 @@ reacciona todo el tablero, en el tablero físico y en una página web.
    - 6 luces de alerta (LED, también por PCA9685);
    - 1 motor paso a paso 28BYJ-48 para la aguja de la brújula (GPIO).
    Cada uno con su escala, su calibración, su mecánica (engranajes) y una aguja
-   que se mueve con inercia, no a los saltos.
+   que se mueve con inercia, no a saltos.
 3. **Luces que se comportan como en el avión**: cada una se enciende por su
    condición del modelo, se apagan todas sin energía eléctrica, y existe la prueba
    de lámparas.
@@ -40,7 +39,7 @@ reacciona todo el tablero, en el tablero físico y en una página web.
    - la **botonera del profesor** (/mando) sólo con la clave del QR del profesor.
 5. **Apagado ordenado**: al detener el servicio o apagar, luces apagadas, servos
    sin pulso y la brújula vuelve a su cero y guarda la posición.
-6. **Seguir andando aunque falte hardware**: si no responde el I2C, sigue sólo
+6. **Seguir funcionando aunque falte hardware**: si no responde el I2C, sigue sólo
    con la página. Un error en una vuelta del lazo se cuenta y no congela nada.
 7. **Pruebas** para comprobar todo: automáticas sin hardware (PC) y guiadas en
    la Pi (diagnóstico, luces y motor, instrumento por instrumento, general).
@@ -105,7 +104,7 @@ algo de acá difiere, manda el código.
 - Ánodo a +5 V (J8), cátodo por 220 Ω (R2..R7) al canal del PCA1 (J7):
   **encienden con la salida en BAJO** (`LUCES_ACTIVAS_EN_BAJO = True`).
 - Al dar energía, antes de que arranque el servicio, el PCA9685 tiene todo en bajo
-  → las 6 prenden: es la prueba de lámparas del encendido (normal).
+  → las 6 se encienden: es la prueba de lámparas del encendido (normal).
 - Sin energía en la barra (< 20 V) se apagan todas aunque la alarma siga.
 - Luz fantasma posible con la salida en alto (3,3 V): se arregla con un 1N4148 en
   serie en la placa, no en el programa.
@@ -121,15 +120,15 @@ valor  → interpolar_tabla(valor, cal)      # tabla en 0..180 "unidades de dial
 - Barrido > 180°: el servo recorre 0..180 y el par multiplica ×1,5 / ×1,667 / ×2.
 - Las carátulas impresas y la página ponen cada marca en
   `ang_dibujo = centro + B/2 − a·B/180` (si B ≥ 360: `centro − a`), con
-  `centro = 90` salvo VSI (180). Por eso **la tabla `cal` no se toca para calzar
-  una aguja**: se calza la aguja o se calibra el servo.
+  `centro = 90` salvo VSI (180). Por eso **la tabla `cal` no se toca para ajustar
+  una aguja**: se ajusta la aguja o se calibra el servo.
 
 ## 4. Arquitectura del software
 
 ```
 H08_Pi5/
-├── CLAUDE.md, CONTEXTO_PROYECTO.md, LEEME.md, VERSION.txt, empaquetar.py
-├── docs/            GUIA_ESTRUCTURA_Y_ESTILO.md
+├── README.md, CHANGELOG.md, CONTEXTO_PROYECTO.md, LEEME.md, VERSION.txt, empaquetar.py
+├── docs/            explicaciones largas: modelo de vuelo, mecánica, hardware, acceso
 ├── h08/             EL PROGRAMA: python3 -m h08 (paquete, imports absolutos)
 │   ├── __main__.py  arranca el tablero y despacha los subcomandos
 │   ├── rutas.py     dónde está cada archivo (una sola definición)
@@ -175,7 +174,7 @@ solo. Basado en la documentación de Raspberry Pi y en cómo está instalado hoy
 ### 5.1 Sistema operativo
 - **Raspberry Pi OS (64 bits) con escritorio**, grabado con Raspberry Pi Imager.
   - Bookworm (Debian 12, Python 3.11) o **Trixie** (Debian 13, salida el
-    2-oct-2025, Python 3.13). El código tiene que andar en **Python 3.9 a 3.13**.
+    2-oct-2025, Python 3.13). El código tiene que funcionar en **Python 3.9 a 3.13**.
   - Escritorio Wayland con el compositor **labwc**.
   - Red con **NetworkManager** (`nmcli`).
 - Usuario normal (el creado en Imager, ej. `pi` o `mateo`); el programa **no corre
@@ -302,8 +301,8 @@ python3 -m h08 instrumento --todos
 sudo systemctl start tablero-h08
 python3 -m h08 prueba-general          # detiene y arranca el servicio sola
 ```
-Los informes quedan en `datos/informes/`. Cuando el usuario los traiga,
-leerlos y separar hardware de código.
+Los informes quedan en `datos/informes/`. Al revisarlos, conviene separar primero
+los problemas de hardware de los del código.
 
 ## 6. Cómo se trabaja (en la computadora, con Windows)
 
@@ -326,7 +325,7 @@ leerlos y separar hardware de código.
 5. Si toca la página, se miró en `localhost:8000` (normal y `?kiosco=1`).
 6. Si cambia algo que ve el usuario o el procedimiento, se actualizó `LEEME.md`
    (y este documento si cambia el formato o el hardware).
-7. Textos para personas en castellano rioplatense (voseo).
+7. Textos para personas en castellano, con voseo y sin modismos.
 8. Nunca toca `secreto_admin.json`, `calibracion_servos.json`,
    `posicion_motores.json`.
 
@@ -338,4 +337,4 @@ leerlos y separar hardware de código.
 - La fuente de servos (LM2596, 3 A) limita cuántos se mueven a la vez: arranque
   escalonado de a 3 (`ARRANQUE`).
 - Luz fantasma: arreglo de hardware pendiente (1N4148).
-- J1 espejado: Dupont por función, pendiente de confirmar por el usuario.
+- J1 espejado: Dupont por función, pendiente de confirmar en el tablero.

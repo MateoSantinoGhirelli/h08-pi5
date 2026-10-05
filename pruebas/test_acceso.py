@@ -3,7 +3,7 @@
 
 Prueba h08/web/acceso.py sin levantar ningún servidor. Son las reglas que
 deciden quien puede meterle una falla al tablero delante de un curso, así que
-conviene que estén probadas de verdad y no "se ve que anda".
+conviene que estén probadas de verdad y no "se ve que funciona".
 
     python3 -m unittest pruebas.test_acceso -v
 """

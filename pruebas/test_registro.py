@@ -95,7 +95,7 @@ class ElLazoDeSimulacion(Prueba):
                 time.sleep(0.05)
             nucleo.detener()
             nucleo.join(5)
-        self.comprobar("el lazo siguió andando después de los errores", nucleo.errores >= 5,
+        self.comprobar("el lazo siguió funcionando después de los errores", nucleo.errores >= 5,
                        nucleo.errores)
         self.comprobar_igual("se anotan sólo los tres primeros", len(visto.records), 3)
         self.comprobar("con el número de error y el detalle",

@@ -14,7 +14,7 @@ from h08.config import TABLERO, TABLERO_POR_ID, PLACAS
 SERVICIO = "tablero-h08"
 
 
-def servicio_andando():
+def servicio_activo():
     try:
         r = subprocess.run(["systemctl", "is-active", "--quiet", SERVICIO],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -25,8 +25,8 @@ def servicio_andando():
 
 
 def exigir_servicio_detenido():
-    if servicio_andando():
-        print("\n  El servicio del tablero está andando y usa las mismas placas.")
+    if servicio_activo():
+        print("\n  El servicio del tablero está en marcha y usa las mismas placas.")
         print("  Primero:   sudo systemctl stop %s" % SERVICIO)
         print("  Al final:  sudo systemctl start %s\n" % SERVICIO)
         sys.exit(1)

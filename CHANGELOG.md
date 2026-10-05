@@ -9,7 +9,7 @@ La versión que corre el tablero está en `h08/__init__.py` y se ve al arrancar 
 
 ## [1.0.0] - 2026-10-02
 
-Primera versión ordenada. El programa pasó de un montón de archivos sueltos al paquete
+Primera versión ordenada. El programa pasó de muchos archivos sueltos al paquete
 `h08`, con el código separado de los datos y las pruebas al estándar de Python. El
 tablero hace lo mismo que antes: ningún canal, calibración, barrido, pin ni la red wifi
 cambiaron de valor.
@@ -40,7 +40,7 @@ cambiaron de valor.
 - Una conexión abandonada (un celular que se fue de la red sin cerrar) se cierra sola
   pasado un minuto, en vez de dejar un hilo colgado para siempre.
 - La clave con una tilde (`/mando?k=ñ`) ya no corta el pedido con un error.
-- `python3 -m h08` con el servicio ya andando avisa que el puerto está tomado antes de
+- `python3 -m h08` con el servicio ya en marcha avisa que el puerto está tomado antes de
   abrir las placas, en vez de dejar los servos sin pulso.
 - La cámara lenta (`0,5×`) ahora avanza exactamente a esa velocidad.
 - `deploy/actualizar.sh` rechaza un paquete que no es la versión nueva, o la propia

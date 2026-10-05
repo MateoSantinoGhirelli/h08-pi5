@@ -8,7 +8,7 @@ y se los da a un lector de verdad, el de OpenCV, a ver si sale el mismo texto qu
 entró. Escribiendo qr.py aparecieron tres errores que daban códigos impecables a
 simple vista: el polinomio de Reed-Solomon espejado, el bloque de información de
 versión faltante (de la 7 en adelante) y el contador de caracteres fijo en 8 bits,
-que desde la versión 10 son 16. El último es el peor: las versiones 1 a 9 andaban y
+que desde la versión 10 son 16. El último es el peor: las versiones 1 a 9 funcionaban y
 sólo fallaba la 10, la de los textos largos. Por eso se recorren las diez.
 
 Si OpenCV no está, la prueba figura como salteada: no es una dependencia del tablero,

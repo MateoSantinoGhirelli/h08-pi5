@@ -38,7 +38,7 @@ SERVO_CFG = {
 # En la placa madre cada LED va con el ánodo a +5 V (J8) y el cátodo, por 220 Ω
 # (R2..R7), a una salida del PCA9685 (J7), que sumidera la corriente: enciende con
 # la salida en BAJO. Al dar energía, antes de que arranque el programa, todas las
-# salidas están en bajo y prenden las seis: es la prueba de lámparas del encendido.
+# salidas están en bajo y se encienden las seis: es la prueba de lámparas del encendido.
 LUCES_ACTIVAS_EN_BAJO = True
 
 # 28BYJ-48 con su plaquita ULN2003. La reducción real es

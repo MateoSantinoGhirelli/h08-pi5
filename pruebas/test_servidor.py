@@ -169,7 +169,7 @@ class ElProfesor(ConServidor):
 
         antes = len(self.nucleo.ordenes)
         cod, _c, _ = p.post("/api/modo/3?id=OIL_PRESS_LOSS")
-        self.comprobar_igual("puede meter una falla", cod, 200)
+        self.comprobar_igual("puede activar una falla", cod, 200)
         self.comprobar_igual("y la orden llego al núcleo", len(self.nucleo.ordenes), antes + 1)
         self.comprobar_igual("con lo que corresponde", self.nucleo.ordenes[-1],
                              ("modo_falla", "OIL_PRESS_LOSS"))

@@ -4,7 +4,7 @@
     python3 -m h08                     tablero completo: servos, luces, el paso
                                        a paso de la brújula y la página web
     python3 -m h08 --simulado          sin hardware: sólo la página web
-                                       (anda también en una computadora)
+                                       (funciona también en una computadora)
     python3 -m h08 --sin-motores       sin el paso a paso de la brújula
     python3 -m h08 --banco             banco de pruebas en protoboard: un solo
                                        PCA9685 con servos, sin motores y con la
@@ -44,7 +44,7 @@ SUBCOMANDOS = {
     "prueba-general": ("prueba_general", "el tablero entero, de punta a punta"),
     "luces-motor": ("prueba_luces_motor", "las luces de alerta y el motor de la brújula"),
     "instrumento": ("prueba_instrumento", "instrumento por instrumento"),
-    "canal": ("probar_canal", "un canal suelto, para calzar una aguja"),
+    "canal": ("probar_canal", "un canal suelto, para ajustar una aguja"),
     "motor": ("probar_motor", "el motor suelto: sentido, bobinas y cero"),
     "calibrar": ("calibrar_servo", "los extremos reales de un servo"),
 }
@@ -242,14 +242,14 @@ def tablero(argv):
     log.info("tablero didáctico %s, %s", AERONAVE["modelo"], version())
     log.info("matrícula %s, %s", AERONAVE["matricula"], AERONAVE["serie"])
 
-    # El puerto se toma antes que las placas: si ya hay un tablero andando (el
+    # El puerto se toma antes que las placas: si ya hay un tablero en marcha (el
     # servicio), abrirlas dejaría sus servos sin pulso antes de fallar acá.
     try:
         servidor = servidor_web.crear(None, args.puerto, rutas.ESTATICOS,
                                       donde="la Raspberry",
                                       acceso=None if args.sin_clave else acceso)
     except OSError as e:
-        log.error("el puerto %d está ocupado (%s): ¿ya hay un tablero andando?", args.puerto, e)
+        log.error("el puerto %d está ocupado (%s): ¿ya hay un tablero en marcha?", args.puerto, e)
         log.error("si es el servicio:  sudo systemctl stop tablero-h08   (o usar --puerto)")
         return 1
 

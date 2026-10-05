@@ -2,7 +2,7 @@
 """Quién puede mirar, quién puede mandar y quién manda ahora.
 
 Mirar no tiene clave; mandar sí (la del QR del profesor), y de los admins manda uno
-solo a la vez, porque dos personas metiendo fallas distintas arruinan la
+solo a la vez, porque dos personas activando fallas distintas arruinan la
 demostración. No es seguridad informática: el tablero habla HTTP y protege contra el
 alumno curioso, no contra alguien decidido. Está explicado sin adornos en
 docs/acceso.md, junto con el manejo de la clave y de la cookie.

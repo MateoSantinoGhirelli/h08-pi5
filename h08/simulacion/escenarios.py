@@ -59,14 +59,14 @@ PERFIL_NORMAL = [
                 "magnetos": MAG_BOTH, "arrancador": True, "throttle": 0.14},
         "piloto": False, "obj": None,
         "texto": "Mirar el TACÓMETRO: primero el arrancador ARRASTRA el motor "
-                 "a unas 200 RPM, y recién después el motor PRENDE y acelera "
+                 "a unas 200 RPM, y recién después el motor ARRANCA y acelera "
                  "solo. Mientras arrastra, el amperimetro se va al tope de "
                  "descarga y la barra se hunde a 18 V: los aforadores y las "
                  "temperaturas marcan de menos porque son eléctricos, pero el "
                  "tacometro y el manometro de aceite siguen bien porque no "
                  "dependen de la barra. Y la presión de admisión BAJA de 30 a "
                  "16: con el motor parado marcaba la presión atmosférica. Al "
-                 "prender, la presión de aceite debe subir en menos de 30 "
+                 "arrancar, la presión de aceite debe subir en menos de 30 "
                  "segundos o se corta el motor.",
     },
     {
@@ -350,7 +350,7 @@ ESCENARIOS = [
                           "falta la potencia que se llevó."}),
             (195, {"ctl": {"calefaccion_carb": 1.0},
                    "msg": "CALEFACCIÓN DE CARBURADOR CONECTADA, que era lo que "
-                          "había que hacer 150 segundos antes. Ojo: la admisión "
+                          "había que hacer 150 segundos antes. Atención: la admisión "
                           "baja un poco MÁS al principio, porque el aire "
                           "caliente es menos denso. Empeora antes de mejorar, y "
                           "ahí es donde muchos la desconectan."}),
@@ -599,7 +599,7 @@ ESCENARIOS = [
                           "Un solo instrumento contra todos los demás."}),
             (165, {"obj": {"ias": 85.0},
                    "msg": "Se acelera a 85 kt y la aguja sigue clavada en 74. "
-                          "El altímetro y el variómetro andan perfectos, así "
+                          "El altímetro y el variómetro funcionan perfectamente, así "
                           "que la toma estática está bien: lo que se tapó es "
                           "el PITOT, que es del velocímetro solo."}),
             (195, {"msg": "Las dos fallas del escenario tienen la misma "

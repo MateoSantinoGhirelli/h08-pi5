@@ -4,7 +4,7 @@
 import time as _t
 
 # Monotónico y no la hora del sistema: si se corrige la hora de la Pi con el
-# tablero andando, la simulación no salta.
+# tablero en marcha, la simulación no salta.
 _T0 = _t.monotonic()
 
 
@@ -97,7 +97,7 @@ def interpolar_tabla(x, tabla):
     bajo porque la presión dinámica va con V²; los aforadores siguen la forma del
     tanque): en vez de modelar cada mecanismo, la tabla dice dónde cae cada marca.
     Las carátulas impresas están dibujadas con estas tablas, así que una aguja que
-    no cae en su marca se calza o se calibra el servo; la tabla no se toca.
+    no cae en su marca se ajusta o se calibra el servo; la tabla no se toca.
     """
     n = len(tabla)
     if n == 0:

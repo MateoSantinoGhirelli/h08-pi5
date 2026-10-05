@@ -290,7 +290,7 @@ class LasPlacasPCA9685(Prueba):
         act2 = P.ActuadoresPCA9685(bus=bus2)
         act2.escribir_servo(("PCA1", 0), 90)
         act2.refrescar()
-        self.comprobar("si falta una placa se informa y el resto anda",
+        self.comprobar("si falta una placa se informa y el resto funciona",
                        "PCA1" in act2.descripcion() and act2.errores == 0, act2.descripcion())
 
 

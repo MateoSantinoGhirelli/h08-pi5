@@ -18,8 +18,8 @@ No hace falta internet, ni pip, ni instalar nada fuera de los paquetes del siste
 |---|---|
 | Raspberry Pi 5 | con su fuente oficial de 27 W (5,1 V 5 A) |
 | Sistema | **Raspberry Pi OS con escritorio**, 64 bits, Bookworm o posterior |
-| Pantalla | HDMI (la de la Raspberry). Es opcional: sin pantalla anda igual |
-| Placa madre | armada y cableada. **Ojo: J1 va con Dupont, ver abajo** |
+| Pantalla | HDMI (la de la Raspberry). Es opcional: sin pantalla funciona igual |
+| Placa madre | armada y cableada. **Importante: J1 va con Dupont, ver abajo** |
 | Fuente de servos | la del tablero (LM2596, 5 V). **Nunca** los servos desde la Pi |
 
 ---
@@ -35,7 +35,7 @@ Todo se hace con `python3 -m h08`, **desde la carpeta del programa** (`cd ~/H08_
 | `python3 -m h08 prueba-general` | el tablero entero, de punta a punta |
 | `python3 -m h08 luces-motor` | las luces de alerta y el motor de la brújula |
 | `python3 -m h08 instrumento` | instrumento por instrumento |
-| `python3 -m h08 canal` | un canal suelto, para calzar una aguja |
+| `python3 -m h08 canal` | un canal suelto, para ajustar una aguja |
 | `python3 -m h08 motor` | el motor suelto: sentido, bobinas y cero |
 | `python3 -m h08 calibrar` | los extremos reales de un servo |
 
@@ -175,12 +175,12 @@ sudo systemctl start tablero-h08       # después
 
 | # | Prueba | Para qué |
 |---|---|---|
-| 1 | `python3 -m h08 diagnostico` | **Diagnóstico de conexiones.** Revisa sistema, alimentación (baja tensión y 5 V medidos), bus I2C (qué hay conectado y si cada PCA9685 quedó configurado a 50 Hz), GPIO del motor, servicio, pantalla, wifi y archivos. No mueve nada y puede correr con el servicio andando. Para cada falla dice el comando que la arregla. |
+| 1 | `python3 -m h08 diagnostico` | **Diagnóstico de conexiones.** Revisa sistema, alimentación (baja tensión y 5 V medidos), bus I2C (qué hay conectado y si cada PCA9685 quedó configurado a 50 Hz), GPIO del motor, servicio, pantalla, wifi y archivos. No mueve nada y puede correr con el servicio en marcha. Para cada falla dice el comando que la arregla. |
 | 2 | `python3 -m h08 luces-motor` | **Luces y motor.** Prueba de lámparas, cada luz de a una (así se ven dos cables cruzados), la luz fantasma, las bobinas A-B-C-D de la plaquita, N-E-S-O, el camino corto (de 350° a 10°), tres vueltas de ida y vuelta sin perder pasos, y que las bobinas se suelten en reposo. |
 | 3 | `python3 -m h08 canal ID --valor V` | **Calzar la aguja** de cada instrumento sobre su marca (por ejemplo `python3 -m h08 canal AIRSPEED --valor 60`). |
 | 4 | `python3 -m h08 calibrar PCA0 6 --asistente` | Sólo si un servo no llega a un extremo o zumba en el tope. |
 | 5 | `python3 -m h08 instrumento --todos` | **Instrumento por instrumento.** Lleva cada aguja por los números grandes de **su** carátula, con la misma cuenta que usa el tablero en marcha, y pregunta si marca bien. También pasa por N-E-S-O en la brújula y por cada luz. Si algo falla, dice con qué se arregla. Para uno solo: `python3 -m h08 instrumento VSI`. |
-| 6 | `python3 -m h08 prueba-general` | **Prueba general del tablero, de punta a punta.** Tarda unos 15 minutos; detiene y arranca el servicio sola. Tiene tres partes: diagnóstico, hardware solo y tablero entero. En el hardware solo las 20 agujas barren **juntas** mientras se mide la alimentación, y ésa es la prueba de la fuente de servos. En el tablero entero se toma el mando con la clave del profesor, se prueban las luces desde el mando, se meten dos fallas (aceite y generador) y se comprueba la pantalla y un celular. |
+| 6 | `python3 -m h08 prueba-general` | **Prueba general del tablero, de punta a punta.** Tarda unos 15 minutos; detiene y arranca el servicio sola. Tiene tres partes: diagnóstico, hardware solo y tablero entero. En el hardware solo las 20 agujas barren **juntas** mientras se mide la alimentación, y ésa es la prueba de la fuente de servos. En el tablero entero se toma el mando con la clave del profesor, se prueban las luces desde el mando, se activan dos fallas (aceite y generador) y se comprueba la pantalla y un celular. |
 
 Todas aceptan `--simulado --auto` para ver cómo son en una computadora, sin hardware.
 
@@ -207,7 +207,7 @@ Las pruebas automáticas del programa (no necesitan hardware) se corren con `pyt
 
 ## Actualizar a una versión nueva
 
-Si trabajás el código en la computadora (por ejemplo con Claude Code), el zip se arma ahí con `py empaquetar.py`. Primero corre las pruebas; si pasan, deja `dist/H08_Pi5.zip`. Eso se lleva a la Pi en un pendrive y se instala con el comando de abajo.
+Si trabajás el código en la computadora, el zip se arma ahí con `py empaquetar.py`. Primero corre las pruebas; si pasan, deja `dist/H08_Pi5.zip`. Eso se lleva a la Pi en un pendrive y se instala con el comando de abajo.
 
 ```
 cd ~/H08_Pi5
@@ -230,14 +230,14 @@ Si en la Raspberry todavía está la versión vieja (la de `raspberry_pi5/tabler
 ## Cómo funcionan las luces
 
 - En la placa, el ánodo de cada LED va a +5 V y el cátodo va, por su resistencia de 220 Ω, a una salida del PCA9685. **La luz enciende con la salida en BAJO.** El programa ya lo tiene en cuenta (`LUCES_ACTIVAS_EN_BAJO` en `h08/config/hardware.py`).
-- **Al dar energía, las seis luces se encienden** hasta que arranca el servicio, unos 20 a 30 segundos. Es normal y sirve de prueba de lámparas del encendido: la que no prende ahí tiene el LED o el cable cortado.
+- **Al dar energía, las seis luces se encienden** hasta que arranca el servicio, unos 20 a 30 segundos. Es normal y sirve de prueba de lámparas del encendido: la que no se enciende en ese momento tiene el LED o el cable cortado.
 - Cada luz se enciende por **su** condición del modelo (ver la tabla de canales). Si la barra eléctrica cae por debajo de 20 V, se apagan todas, como en el avión.
 - La **prueba de lámparas del mando** enciende las seis en el tablero **y** en la página, que ahora muestra lo que tienen las luces de verdad.
 - **Luz fantasma.** Con la salida "apagada" (en alto, 3,3 V), al LED le quedan 1,7 V. Un LED rojo o ámbar puede verse apenas encendido en la oscuridad, y el programa no lo puede evitar. Se arregla en la placa con un diodo 1N4148 en serie con cada LED. `python3 -m h08 luces-motor` pregunta por esto.
 
 ---
 
-## Si algo no anda
+## Si algo no funciona
 
 Todos los comandos, desde `~/H08_Pi5`.
 
@@ -249,7 +249,7 @@ Todos los comandos, desde `~/H08_Pi5`.
 | `No module named h08` | el comando se corrió fuera de la carpeta: `cd ~/H08_Pi5` y repetir |
 | Ninguna aguja se mueve | `python3 -m h08 diagnostico`: el punto 3 dice si responden los PCA9685 |
 | Una sola aguja no se mueve | `python3 -m h08 instrumento ESA`, después el cable de su canal |
-| La aguja marca corrido | `python3 -m h08 canal ESA --valor V` y calzar la aguja |
+| La aguja marca corrido | `python3 -m h08 canal ESA --valor V` y ajustar la aguja |
 | Zumba contra un tope | `python3 -m h08 calibrar PCA0 N --asistente` |
 | Las placas se reinician cuando se mueven muchas agujas | Es la fuente de servos: el LM2596 da 3 A como máximo. `python3 -m h08 prueba-general` (A3) lo muestra |
 | La brújula gira al revés | `sentido` en `MOTORES` (`h08/config/hardware.py`) |
@@ -264,11 +264,10 @@ Todos los comandos, desde `~/H08_Pi5`.
 H08_Pi5/
 ├── LEEME.md                  esto
 ├── VERSION.txt               qué versión es
-├── CLAUDE.md                 las reglas cortas para Claude Code
 ├── CONTEXTO_PROYECTO.md      el proyecto completo y el formato de instalación en la Pi 5
 ├── empaquetar.py             arma dist/H08_Pi5.zip para llevar a la Pi
 ├── .gitignore .gitattributes para git: lo privado afuera y fin de línea LF
-├── docs/                     guía de estructura y estilo del código
+├── docs/                     explicaciones del modelo, la mecánica y el hardware
 ├── h08/                      el programa: python3 -m h08
 │   ├── __main__.py           el tablero y los subcomandos
 │   ├── rutas.py              dónde está cada archivo

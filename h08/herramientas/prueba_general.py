@@ -14,7 +14,7 @@ o no en cada paso y guarda un informe fechado en datos/informes/.
                    lámparas, las 20 agujas al medio de a tres, las 20 barriendo
                    juntas mientras se mide la alimentación (es la prueba de la
                    fuente de servos), brújula N-E-S-O-N y todo suelto
-  B. tablero entero con el servicio andando, operándolo como el profesor por la
+  B. tablero entero con el servicio en marcha, operándolo como el profesor por la
                    misma API que la página de mando: arranque, pantalla, un
                    celular por wifi, prueba de luces, dos fallas (aceite y
                    generador) y la vuelta a vuelo normal
@@ -40,7 +40,7 @@ from h08.util import interpolar_tabla
 
 S0 = "0. DIAGNÓSTICO"
 SA = "A. HARDWARE SOLO (servicio detenido)"
-SB = "B. TABLERO ENTERO (servicio andando)"
+SB = "B. TABLERO ENTERO (servicio en marcha)"
 
 
 # Servicio y API
@@ -436,7 +436,7 @@ def main(argv=None):
         elif not a.simulado:
             systemctl("start", a.simulado)
     except KeyboardInterrupt:
-        print("\n  Cortada. Se deja el servicio andando.")
+        print("\n  Cortada. Se deja el servicio en marcha.")
         systemctl("start", a.simulado)
     print("\n" + inf.texto())
     print("\n  Informe guardado en: %s\n" % inf.guardar("prueba_general"))

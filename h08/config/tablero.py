@@ -8,7 +8,7 @@ Cada entrada de TABLERO es un actuador (o una aguja que sólo dibuja la página)
   cal      [(valor, ángulo 0..180)]: dónde cae cada marca de la carátula impresa
   tau      inercia de la aguja en s; slew: velocidad máxima en grados/s
   canal    ("PCA0", 7), ("MOTOR", 1), o None si sólo está en la página
-Las tablas cal son las de las carátulas impresas: una aguja corrida se calza o se
+Las tablas cal son las de las carátulas impresas: una aguja corrida se ajusta o se
 calibra el servo, la tabla no se toca (docs/mecanica.md).
 """
 

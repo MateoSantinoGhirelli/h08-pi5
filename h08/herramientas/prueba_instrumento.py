@@ -135,7 +135,7 @@ def probar_luz(act, it, P, inf):
 
 
 ARREGLOS = {
-    SERVO: ("Si marca corrido lo mismo en toda la escala: calzar la aguja con\n"
+    SERVO: ("Si marca corrido lo mismo en toda la escala: ajustar la aguja con\n"
             "        python3 -m h08 canal {id} --valor {medio}\n"
             "      Si llega bien a un extremo y no al otro, o zumba en un tope:\n"
             "        python3 -m h08 calibrar {canal} --asistente\n"
@@ -143,7 +143,7 @@ ARREGLOS = {
     MOTOR: ("Si gira al revés: 'sentido' en MOTORES (h08/config/hardware.py).\n"
             "      Si queda corrida: python3 -m h08 motor 1 --mover -5 y después --cero.\n"
             "      Si tiembla y no gira: python3 -m h08 motor 1 --bobinas (orden A-B-C-D)."),
-    LED: ("Si no prende: LED al revés, o el cable de J7/J8. Probar el LED solo con\n"
+    LED: ("Si no enciende: LED al revés, o el cable de J7/J8. Probar el LED solo con\n"
           "      una resistencia de 220 ohm entre +5 V y GND."),
 }
 

@@ -10,5 +10,3 @@ __pycache__/
 *.pyc
 dist/
 *.zip
-CLAUDE.local.md
-.claude/settings.local.json

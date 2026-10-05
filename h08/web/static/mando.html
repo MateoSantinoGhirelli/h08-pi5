@@ -5,31 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mando · Tablero H-08</title>
 <!--
-  ===========================================================================
-  mando.html - la botonera del profesor, para el pulgar
-  ===========================================================================
+  Botonera del profesor (/mando), pensada para usar con el pulgar.
 
-  PARA QUE ES ESTA PAGINA, Y POR QUE ES OTRA
-  El tablero se proyecta en una pantalla grande y el que lo opera lo hace
-  desde el celular, parado adelante del curso. Son dos usos distintos con dos
-  formas distintas: la pantalla proyectada tiene que ser el tablero y nada
-  más, y el celular tiene que ser botones que se toquen sin mirar.
+  La pantalla proyectada (/) muestra sólo el tablero; esta página tiene sólo
+  los botones. Así la botonera no aparece en la proyección y en el celular los
+  botones se pueden tocar sin mirar.
 
-  Meter las dos cosas en la misma pagina obligaba a que la botonera apareciera
-  proyectada, o a esconderla con un truco. Separandolas, cada una es lo que
-  tiene que ser: /  es el tablero, /mando es la botonera.
+  Varios pueden entrar con el QR del profesor, pero uno solo tiene el mando a
+  la vez. La página consulta cada segundo quién lo tiene: si es otro, muestra
+  el botón para pedirlo; si es este celular, avisa si alguien lo está pidiendo.
+  Así dos personas no activan fallas distintas al mismo tiempo.
 
-  EL MANDO
-  Varios pueden entrar con el QR del profesor, pero uno solo manda a la vez.
-  Esta pagina pregunta cada segundo quien lo tiene: si es otro, muestra el
-  boton de pedirlo; si es este, muestra si alguien lo esta pidiendo. Dos
-  personas metiendo fallas distintas al mismo tiempo no arruinan la seguridad,
-  arruinan la clase.
-
-  LOS BOTONES SON GRANDES A PROPOSITO
-  44 px de alto minimo, que es lo que recomienda cualquier guia de interfaz
-  tactil, y separados. El que opera esto esta hablando, mirando al curso y
-  tocando sin mirar la pantalla.
+  Los botones miden 44 px de alto como mínimo y están separados: quien opera
+  está hablando y mirando al curso, no a la pantalla.
 -->
 <style>
  :root{--fondo:#14161a;--panel:#1c2026;--panel2:#232932;--borde:#2b323c;
@@ -203,11 +191,11 @@ function vel(v){
 let timerLamp=null;
 function lamparas(){
   const b=$('blamp');
-  const prender=!b.classList.contains('on');
-  orden('prueba_luces',prender);
-  b.classList.toggle('on',prender);
+  const encender=!b.classList.contains('on');
+  orden('prueba_luces',encender);
+  b.classList.toggle('on',encender);
   clearTimeout(timerLamp);
-  if(prender) timerLamp=setTimeout(()=>{ orden('prueba_luces',false);
+  if(encender) timerLamp=setTimeout(()=>{ orden('prueba_luces',false);
                                           b.classList.remove('on'); },5000);
 }
 function piloto(){

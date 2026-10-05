@@ -117,7 +117,7 @@ def motor(gestor, P, inf):
         esc(m.pines, 1 << i)
         I.dormir(1.0)
     m.soltar()
-    r = P.si_no("¿Se prendieron los LED de la plaquita en orden A, B, C, D?")
+    r = P.si_no("¿Se encendieron los LED de la plaquita en orden A, B, C, D?")
     if r == "q":
         return False
     if r == "s":

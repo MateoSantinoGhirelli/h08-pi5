@@ -402,7 +402,7 @@ class ModeloVuelo:
         # El R-1340 tiene doble encendido: dos bujías por cilindro, cada una
         # alimentada por un magneto distinto. Con las dos, el frente de llama
         # sale de dos puntos y la combustión termina rápido. Con una sola el
-        # motor SIGUE andando, pero quema peor y pierde alrededor del 11% de
+        # motor SIGUE funcionando, pero quema peor y pierde alrededor del 11% de
         # POTENCIA.
         #
         # La cifra del manual (50 a 100 RPM de caída) es de RÉGIMEN, no de
@@ -523,7 +523,7 @@ class ModeloVuelo:
         # la carga de fricción del radial, el equilibrio queda cerca de las
         # 230 RPM, que es la velocidad de arrastre real de un R-1340. Esa es
         # la aguja del tacómetro subiendo despacio ANTES de que el motor
-        # encienda: primero arrastra, después prende.
+        # encienda: primero arrastra, después arranca.
         if self.arranque_activo:
             p_arrancador = 0.055 + 0.30 * limitar(1.0 - self.n_eng_rpm / 250.0, 0.0, 1.0)
         else:

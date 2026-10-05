@@ -10,7 +10,7 @@ Con el servicio del tablero detenido (sudo systemctl stop tablero-h08):
     python3 -m h08 canal AIRSPEED --recorrer    la escala entera del
                                                 instrumento, con su calibración
     python3 -m h08 canal AIRSPEED --valor 0     lleva el instrumento a ese valor
-                                                de su escala: así se calza la aguja
+                                                de su escala: así se ajusta la aguja
     python3 -m h08 canal --luces                enciende las seis luces de a una
     python3 -m h08 canal --apagar               luces apagadas y servos sueltos
 
@@ -89,7 +89,7 @@ def main(argv=None):
     ap.add_argument("--barrer", action="store_true")
     ap.add_argument("--recorrer", action="store_true")
     ap.add_argument("--valor", type=float,
-                    help="valor de la escala del instrumento (para calzar la aguja)")
+                    help="valor de la escala del instrumento (para ajustar la aguja)")
     ap.add_argument("--luces", action="store_true")
     ap.add_argument("--apagar", action="store_true")
     ap.add_argument("--seg", type=float, default=3.0, help="duración de cada tramo")

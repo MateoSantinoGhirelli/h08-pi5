@@ -49,18 +49,18 @@ Todo el código vive en el paquete `h08/` y se corre con `python3 -m h08`. Los d
 cada tablero (clave, calibración, posición del motor) van aparte, en `datos/`, para que
 una actualización pueda reemplazar `h08/` sin miedo.
 
-- `h08/config/` — el tablero en datos (canales, escalas, calibración, pines).
-- `h08/simulacion/` — el modelo de vuelo, las fallas y los escenarios.
-- `h08/hardware/` — los servos y luces (PCA9685) y la brújula (paso a paso).
-- `h08/web/` — el servidor, la página y los QR.
-- `h08/herramientas/` — diagnóstico, pruebas guiadas y ajustes de la Pi.
-- `deploy/` — los scripts de instalación y arranque. `pruebas/` — las pruebas.
+- `h08/config/`: el tablero en datos (canales, escalas, calibración, pines).
+- `h08/simulacion/`: el modelo de vuelo, las fallas y los escenarios.
+- `h08/hardware/`: los servos y luces (PCA9685) y la brújula (paso a paso).
+- `h08/web/`: el servidor, la página y los QR.
+- `h08/herramientas/`: diagnóstico, pruebas guiadas y ajustes de la Pi.
+- `deploy/`: los scripts de instalación y arranque. `pruebas/`: las pruebas.
 
 ## Documentación
 
-- **[LEEME.md](LEEME.md)** — guía completa para instalar y usar el tablero.
-- **[CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md)** — requisitos, hardware, canales y el
+- **[LEEME.md](LEEME.md)**: guía completa para instalar y usar el tablero.
+- **[CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md)**: requisitos, hardware, canales y el
   formato en que tiene que estar instalado en la Pi.
-- **[docs/](docs/)** — las explicaciones largas: modelo de vuelo, hardware, acceso,
+- **[docs/](docs/)**: las explicaciones largas: modelo de vuelo, hardware, acceso,
   calibración y geometría del tablero.
-- **[CHANGELOG.md](CHANGELOG.md)** — qué cambió en cada versión.
+- **[CHANGELOG.md](CHANGELOG.md)**: qué cambió en cada versión.

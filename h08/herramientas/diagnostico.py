@@ -7,7 +7,7 @@
 
 Revisa en orden sistema, alimentación, I2C y placas, motor, servicio, pantalla, wifi
 propia y archivos, y para cada cosa que falla dice el comando que la arregla. Se
-puede correr con el servicio andando.
+puede correr con el servicio en marcha.
 """
 
 import argparse
@@ -182,10 +182,10 @@ def revisar(eco=True):
     cfg = leer("/boot/firmware/config.txt") or leer("/boot/config.txt")
     m = re.search(r"^dtparam=i2c_arm_baudrate=(\d+)", cfg, re.M)
     R.decir(bool(m), "Velocidad del bus: %s" % ("%s Hz" % m.group(1) if m else "100 kHz (de fábrica)"),
-            "bash deploy/instalar.sh la deja en 400 kHz (con 100 kHz anda, pero más lento)")
+            "bash deploy/instalar.sh la deja en 400 kHz (con 100 kHz funciona, pero más lento)")
     R.decir(soy_root or "i2c" in g, "Usuario en el grupo i2c",
             "sudo usermod -aG i2c $USER   y volver a iniciar sesión")
-    servicio = banco.servicio_andando()
+    servicio = banco.servicio_activo()
     if hay:
         try:
             from h08.hardware.pca9685 import BusI2C, PCA9685, MODE1, MODE2, PRESCALE
@@ -258,7 +258,7 @@ def revisar(eco=True):
         R.dato("(pines no revisados: los está usando el servicio, que es lo normal)")
 
     R.titulo("5. SERVICIO DEL TABLERO")
-    R.decir(servicio, "Servicio %s andando" % banco.SERVICIO,
+    R.decir(servicio, "Servicio %s en marcha" % banco.SERVICIO,
             "sudo systemctl start %s   (errores: journalctl -u %s -n 50)"
             % (banco.SERVICIO, banco.SERVICIO))
     R.decir(correr(["systemctl", "is-enabled", banco.SERVICIO]) == "enabled",

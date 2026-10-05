@@ -8,7 +8,7 @@ Con el servicio detenido (sudo systemctl stop tablero-h08):
 
     python3 -m h08 motor --listar              pines, sentido y posición guardada
     python3 -m h08 motor 1 --bobinas           IN1..IN4 de a una, 1 s cada una:
-                                               se prenden los LED A, B, C, D
+                                               se encienden los LED A, B, C, D
                                                de la plaquita en ese orden
     python3 -m h08 motor 1 --grados 90         la aguja tiene que apuntar a la E
     python3 -m h08 motor 1 --mover -5          corre la aguja 5 grados, para
@@ -19,7 +19,7 @@ Con el servicio detenido (sudo systemctl stop tablero-h08):
 
 Si gira al revés, se cambia el 'sentido' de ese motor en MOTORES
 (h08/config/hardware.py), sin tocar cables. Si tiembla y no gira, los cables IN1..IN4
-están cruzados: con --bobinas los LED de la plaquita tienen que prender en orden A,
+están cruzados: con --bobinas los LED de la plaquita tienen que encenderse en orden A,
 B, C, D. Al terminar, la aguja vuelve a su cero y la posición queda guardada.
 """
 

@@ -7,24 +7,17 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2314171a' stroke='%23a8b48c' stroke-width='2'/%3E%3Cline x1='16' y1='16' x2='16' y2='5' stroke='%23ffffff' stroke-width='2'/%3E%3C/svg%3E">
 
 <!--
-  ==========================================================================
-  PANEL DE CABINA  -  Sikorsky H-19A "H-08"
-  ==========================================================================
-  Este archivo no tiene NINGÚN dato del tablero adentro. Toda la geometría
-  (donde va cada instrumento, que tamaño tiene, que llaves hay en el panel
-  de conmutadores) viaja en /api/catalogo, que la arma h08/config.
-  Para mover un instrumento se edita h08/config, no este archivo.
+  Panel de cabina del Sikorsky H-19A "H-08".
 
-  COMO DIBUJA
-  --------------------------------------------------------------------------
-  Cada esfera se construye UNA SOLA VEZ al arrancar. Después, en cada cuadro,
-  lo único que se toca es el atributo transform de las agujas. No se vuelve a
-  generar HTML nunca más.
+  Este archivo no tiene datos del tablero: la geometría (dónde va cada
+  instrumento, su tamaño, las llaves del panel de conmutadores) llega por
+  /api/catalogo, que se arma desde h08/config. Para mover un instrumento se
+  edita h08/config, no este archivo.
 
-  Además las agujas no saltan de una lectura a la otra: la telemetría llega a
-  5 Hz y un retardo de primer orden las lleva al valor nuevo a 60 Hz, igual
-  que hace el servo real con su propia inercia.
-  ==========================================================================
+  Cada esfera se construye una sola vez al cargar la página; después, en cada
+  cuadro, sólo cambia el atributo transform de las agujas. La telemetría llega
+  a 5 Hz y un retardo de primer orden lleva cada aguja al valor nuevo a 60 Hz,
+  como lo hace el servo real con su propia inercia.
 -->
 
 <style>
@@ -43,7 +36,7 @@ body{background:radial-gradient(ellipse at 50% -10%,#1a1d16 0%,#0a0b09 65%);
      color:var(--texto);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
      font-size:14px;display:flex;flex-direction:column;min-height:100vh}
 
-/* ---------------- encabezado ---------------- */
+/* encabezado */
 header{background:linear-gradient(180deg,#232819,#14170f);border-bottom:1px solid var(--borde);
        padding:8px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;flex:0 0 auto}
 .marca{font-weight:700;letter-spacing:.5px;font-size:15px}
@@ -58,7 +51,7 @@ a.vista{color:var(--tenue);text-decoration:none;border:1px solid var(--borde);
         background:var(--panel2);border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:600}
 a.vista:hover{border-color:var(--acento);color:var(--texto)}
 
-/* ---------------- barra de modos ---------------- */
+/* barra de modos */
 .franja{display:flex;flex-wrap:wrap;gap:7px;padding:9px 16px;align-items:center;
        background:#111309;border-bottom:1px solid var(--borde);flex:0 0 auto}
 .franja button{background:var(--panel2);border:1px solid var(--borde);color:var(--texto);
@@ -78,7 +71,7 @@ a.vista:hover{border-color:var(--acento);color:var(--texto)}
 .franja button.soloVista:hover{opacity:1}
 .franja .est b{color:var(--texto)}
 
-/* ---------------- menu desplegable ---------------- */
+/* menu desplegable */
 .menu{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--borde);
       border-radius:10px;box-shadow:0 16px 46px rgba(0,0,0,.75);max-height:74vh;overflow:auto;
       width:390px;display:none}
@@ -99,9 +92,6 @@ a.vista:hover{border-color:var(--acento);color:var(--texto)}
 .sev.GRAVE{background:#4a2c1c;color:#f0a077}
 .sev.CRITICA{background:#4d1f1f;color:#ff8f7d}
 
-/* =========================================================================
-   EL TABLERO
-   ========================================================================= */
 /* El tablero se dibuja SIEMPRE en su lienzo nominal de 1460 x 680 y después se
    escala entero. El contenedor .lienzo toma el tamaño ya escalado, así el resto
    de la página fluye bien y no quedan huecos ni barras de desplazamiento. */
@@ -187,7 +177,7 @@ a.vista:hover{border-color:var(--acento);color:var(--texto)}
 .lamina .ctl{cursor:help;pointer-events:auto}
 .lamina .ctl:hover .halo{opacity:1}
 
-/* ---------------- info ---------------- */
+/* info */
 .info{flex:0 0 auto;background:#111309;border-top:1px solid var(--borde);padding:9px 16px;
       display:flex;gap:16px;align-items:center;min-height:62px}
 .info .t{font-weight:700;font-size:13.5px;white-space:nowrap}
@@ -203,11 +193,9 @@ a.vista:hover{border-color:var(--acento);color:var(--texto)}
 .log div{padding:2px 0;color:#b9c2a8;overflow-wrap:anywhere}
 .log .ts{color:var(--acento);font-family:ui-monospace,monospace;font-size:10.5px;margin-right:7px}
 
-/* =========================================================================
-   MODO PANTALLA COMPLETA
+/* Modo pantalla completa.
    Deja solo el tablero. Sirve para proyectar en el aula o para dejarlo
-   andando en una muestra. Se sale con Escape o con el botón de la esquina.
-   ========================================================================= */
+   funcionando en una muestra. Se sale con Escape o con el botón de la esquina. */
 .salirplena{position:fixed;top:10px;right:12px;z-index:80;display:none;
   background:rgba(20,24,14,.82);border:1px solid var(--borde);color:var(--tenue);
   border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
@@ -220,12 +208,10 @@ body.plena .marco{padding:0}
 body.plena .salirplena{display:block;opacity:.25;transition:opacity .2s}
 body.plena .salirplena:hover{opacity:1}
 
-/* =========================================================================
-   MODO KIOSCO  (?kiosco=1)
+/* Modo kiosco (?kiosco=1).
    Es lo que muestra la pantalla conectada a la Raspberry desde que se
    enciende. Nadie la opera con mouse: sin puntero, sin botones, y en la
-   esquina los dos QR para que el público entre desde el celular.
-   ========================================================================= */
+   esquina los dos QR para que el público entre desde el celular. */
 body.kiosco{cursor:none}
 body.kiosco #bplena, body.kiosco #aMando{display:none!important}
 .qrk{display:none}
@@ -238,11 +224,9 @@ body.kiosco .qrk{display:flex;position:fixed;right:10px;bottom:8px;z-index:70;ga
 body.kiosco .info, body.kiosco .log{padding-right:260px}
 @media (max-height: 620px){ body.kiosco .qrk img{width:70px;height:70px} }
 
-/* =========================================================================
-   PANTALLAS CHICAS Y BAJAS
+/* Pantallas chicas y bajas.
    El tablero es cuatro veces más ancho que alto: lo que escasea siempre es
-   la ALTURA. Estas reglas le sacan altura al resto para dársela al tablero.
-   ========================================================================= */
+   la ALTURA. Estas reglas le sacan altura al resto para dársela al tablero. */
 @media (max-height: 780px){
   .log{height:58px;padding:4px 12px;font-size:11px}
   .info{min-height:52px;padding:6px 12px}
@@ -1081,7 +1065,7 @@ function construir(){
   // Regiones
   const zonas=CAT.zonas||[];
   zonas.forEach(z=>{
-    // El id deja agarrar una región entera desde afuera, por ejemplo para sacarle
+    // El id permite seleccionar una región entera desde afuera, por ejemplo para sacarle
     // una foto al anunciador. Sin id había que recortar por coordenadas, que se
     // rompe apenas alguien mueve un instrumento.
     h+=`<div class="zona ${z.estilo}" id="Z_${z.id}" style="left:${z.pos[0]}px;top:${z.pos[1]}px;

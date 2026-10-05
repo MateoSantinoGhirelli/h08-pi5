@@ -17,7 +17,7 @@ el tablero en vivo; ninguno tiene que poder meterle una falla por tocar donde no
 3. **Tener el mando.** Un solo dispositivo a la vez. Si el profesor y un ayudante entran
    los dos con el QR, los dos son admin, pero manda uno solo; el otro puede pedirlo.
 
-La tercera existe porque dos personas metiendo fallas distintas al mismo tiempo arruinan
+La tercera existe porque dos personas activando fallas distintas al mismo tiempo arruinan
 la demostración. El que tiene el mando puede ceder o rechazar el pedido; si no contesta
 en 30 segundos, el que pidió se lo queda. Y si el titular desaparece (cerró el navegador,
 se quedó sin batería), a los 45 segundos sin señales el mando queda libre.

@@ -11,7 +11,7 @@ inyectan las fallas (docs/modelo_vuelo.md).
 from h08.util import aproximar, limitar, RNG
 
 # Modelo de sensor por señal:  (tau_segundos, amplitud_ruido_en_unidades)
-# El ruido se calibró a ojo: un R-1340 es un radial de 9 cilindros, vibra
+# El ruido se ajustó por observación: un R-1340 es un radial de 9 cilindros, vibra
 # mucho, y las agujas de presión tiemblan visiblemente.
 SENSORES = {
     "ias_kt":        (0.30, 0.6),

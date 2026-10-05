@@ -59,7 +59,7 @@ for a in "$@"; do
             quitar_arranque_kiosco
             bash "$DEPLOY/kiosco.sh" parar >/dev/null 2>&1 || true
             echo "Listo: el tablero ya no se abre solo en la pantalla."
-            echo "El servicio sigue andando: se ve desde el navegador en http://localhost:8000/"
+            echo "El servicio sigue funcionando: se ve desde el navegador en http://localhost:8000/"
             exit 0 ;;
         *) echo "Opción desconocida: $a"; exit 1 ;;
     esac

@@ -3,7 +3,7 @@
 
 Cada módulo anota con logging.getLogger(__name__); acá se decide cómo sale.
 Con systemd, cada línea empieza con <N> (la prioridad de syslog): journald la
-lee y la saca, y así anda `journalctl -u tablero-h08 -p warning`.
+lee y la saca, y así funciona `journalctl -u tablero-h08 -p warning`.
 """
 import logging
 import os

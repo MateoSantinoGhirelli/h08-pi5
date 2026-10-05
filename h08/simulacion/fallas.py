@@ -498,7 +498,7 @@ CATALOGO = [
             "vueltas, mostrando un alabeo y un rumbo que ya no existen. Un "
             "instrumento apagado avisa; uno que miente, no",
             "La presión de combustible baja de 16 a 9 psi -se cayó la bomba de "
-            "refuerzo, queda la mecánica del motor- pero el motor sigue andando",
+            "refuerzo, queda la mecánica del motor- pero el motor sigue funcionando",
         ],
         "proc": "Vuelo visual con los instrumentos que quedan. Aterrizar de "
                 "inmediato, mientras los giróscopos todavía conserven inercia. "
@@ -519,7 +519,7 @@ CATALOGO = [
         "sintomas": [
             "El velocímetro queda CLAVADO en el último valor y no se mueve "
             "más, aunque cambien la actitud, la potencia y la altura",
-            "El altímetro y el variómetro siguen andando perfectos: comparten "
+            "El altímetro y el variómetro siguen funcionando perfectamente: comparten "
             "la toma estática, pero el pitot es solo del velocímetro",
             "TODO el resto del tablero es coherente y normal. Ese es el dato: "
             "una aeronave que de verdad perdiera velocidad tendría el rotor "

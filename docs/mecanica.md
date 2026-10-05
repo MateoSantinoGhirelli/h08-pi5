@@ -1,7 +1,10 @@
 # Mecánica de las agujas
 
 Los números están en `h08/config/mecanica.py` (`BARRIDO`, `ENGRANAJES`, `HORIZONTE`) y la
-cuenta que los usa está resumida en `CLAUDE.md` («La cuenta que no se puede romper»).
+cuenta que los usa es siempre la misma:
+
+valor → `interpolar_tabla(valor, cal)` (tabla en 0..180) → × `factor_servo(id)` →
+ángulo del servo → pulso con la calibración del servo.
 
 ## Cuánto barre cada aguja
 
@@ -23,7 +26,7 @@ Manda el barrido real del instrumento y la mecánica se acomoda. De ese número 
 
 | Barrido | Solución |
 |---|---|
-| ≤ 180° | El servo alcanza solo: la aguja va calzada directo en su eje y el servo usa sólo la parte del recorrido que hace falta. |
+| ≤ 180° | El servo alcanza solo: la aguja va montada directamente en su eje y el servo usa sólo la parte del recorrido que hace falta. |
 | > 180° | Hace falta un par de engranajes que **multiplique**: el servo da 180° y la aguja tiene que dar más. La relación es barrido/180. |
 
 Los tres pares (módulo 0,5, con 24 dientes en la aguja, que es lo que entra en las bocas
@@ -44,7 +47,7 @@ Las carátulas impresas (el PDF de 5 hojas) y sus copias de la página
 (`h08/web/static/caratulas/`) están dibujadas con estos números. **No hay un programa en
 el proyecto que las regenere**: se hicieron aparte. Cambiar un barrido o una tabla `cal`
 obliga a hacer carátulas nuevas, a reimprimirlas y, si cambia la relación, a imprimir
-otro par de engranajes. Para calzar una aguja corrida no se toca nada de esto: se calza
+otro par de engranajes. Para ajustar una aguja corrida no se toca nada de esto: se acomoda
 la aguja (`python3 -m h08 canal ID --valor V`) o se calibra el servo.
 
 ## El horizonte artificial
@@ -86,5 +89,5 @@ par de engranajes es exactamente lineal.
    creciente.
 
 Si al probarlo el instrumento se mueve al revés (por la marca del servo o por cómo quedó
-calzado el brazo), se invierten los dos extremos de la tabla que corresponda. El
+colocado el brazo), se invierten los dos extremos de la tabla que corresponda. El
 mecanismo no se toca.

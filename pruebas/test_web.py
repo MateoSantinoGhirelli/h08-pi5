@@ -102,7 +102,7 @@ class ElServidorConLaPaginaDeVerdad(Prueba):
                        ap == en_script and ap["clave"] != "", (ap, en_script))
 
     def test_catalogo_y_kiosco(self):
-        """El catálogo trae carátulas, barridos y la red; el kiosco y el mando sin clave andan."""
+        """El catálogo trae carátulas, barridos y la red; el kiosco y el mando sin clave funcionan."""
         s, b, _ = self.c.pedir("GET", "/api/catalogo")
         cat = json.loads(b.decode("utf-8"))
         ins = {i["id"]: i for i in cat["instrumentos"]}

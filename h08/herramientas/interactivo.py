@@ -188,7 +188,7 @@ def abrir_placas(simulado):
 
 
 def abrir_motor(simulado):
-    """GestorMotores andando (con su hilo). Con simulado, pines de mentira y
+    """GestorMotores en marcha (con su hilo). Con simulado, pines de mentira y
     la posición en un archivo temporal (no toca la guardada)."""
     from h08.hardware.paso_a_paso import GestorMotores
     if simulado:

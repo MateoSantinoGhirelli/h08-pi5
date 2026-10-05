@@ -36,4 +36,4 @@ invierten el sentido (`invertido` en `h08/config/mecanica.py`) y lo corrige solo
 - Si una aguja marca corrido en toda la escala por igual.
 
 Si la aguja está corrida pero el servo llega bien a los dos extremos, no es calibración:
-hay que calzar la aguja con `python3 -m h08 canal ID --valor V`.
+hay que ajustar la aguja con `python3 -m h08 canal ID --valor V`.

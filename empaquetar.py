@@ -26,11 +26,11 @@ from h08 import rutas
 
 AQUI = rutas.RAIZ
 CARPETAS = ("h08", "deploy", "pruebas", "docs")
-SUELTOS = ("README.md", "LEEME.md", "CHANGELOG.md", "CLAUDE.md", "CONTEXTO_PROYECTO.md",
-           "pyproject.toml", ".claude/settings.json", "empaquetar.py",
+SUELTOS = ("README.md", "LEEME.md", "CHANGELOG.md", "CONTEXTO_PROYECTO.md",
+           "pyproject.toml", "empaquetar.py",
            ".gitignore", ".gitattributes")
 PRIVADOS = set(rutas.PRIVADOS)
-FUERA_DIR = {"__pycache__", "informes", "datos", ".venv", ".git", "dist", ".claude"}
+FUERA_DIR = {"__pycache__", "informes", "datos", ".venv", ".git", "dist"}
 FUERA_EXT = (".pyc", ".tmp", ".log", ".zip")
 TEXTO = (".py", ".sh", ".md", ".html", ".svg", ".json", ".txt", ".desktop", ".css", ".js")
 RAIZ_ZIP = "H08_Pi5"

@@ -27,7 +27,7 @@ class ElComando(Prueba):
                            (r.stdout + r.stderr)[-300:])
 
     def test_puerto_ocupado(self):
-        """Con el puerto tomado (el servicio andando) se va con un aviso, sin abrir las placas."""
+        """Con el puerto tomado (el servicio en marcha) se va con un aviso, sin abrir las placas."""
         ocupa = socket.socket()
         ocupa.bind(("0.0.0.0", 0))
         ocupa.listen()
